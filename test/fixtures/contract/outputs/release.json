@@ -1,0 +1,22 @@
+{
+  "command": "release",
+  "cases": [
+    {
+      "board": null,
+      "args": [
+        "release",
+        "check",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.update-check.v1",
+        "currentVersion": "<package-version>",
+        "latestVersion": "9999.0.0",
+        "status": "available",
+        "source": "https://raw.githubusercontent.com/Fruit-Guardians/pinwhy/main/package.json",
+        "updateUrl": "https://github.com/Fruit-Guardians/pinwhy/blob/main/README.md#release"
+      }
+    }
+  ]
+}

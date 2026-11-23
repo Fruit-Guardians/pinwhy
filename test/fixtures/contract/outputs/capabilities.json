@@ -1,0 +1,647 @@
+{
+  "command": "capabilities",
+  "cases": [
+    {
+      "board": null,
+      "args": [
+        "capabilities",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.capabilities.v1",
+        "schemaVersion": 1,
+        "version": "<package-version>",
+        "eventVersion": 1,
+        "runtime": {
+          "minimumNode": 18,
+          "runtimeDependencies": 0
+        },
+        "commands": [
+          "init",
+          "setup",
+          "status",
+          "doctor",
+          "node",
+          "start",
+          "goal",
+          "intent",
+          "fact",
+          "vuln",
+          "hint",
+          "checkpoint",
+          "compact",
+          "cursor",
+          "focus",
+          "here",
+          "activity",
+          "promote",
+          "batch",
+          "done",
+          "block",
+          "revive",
+          "edit",
+          "link",
+          "unlink",
+          "remove",
+          "rm",
+          "ls",
+          "list",
+          "show",
+          "tree",
+          "digest",
+          "context",
+          "lint",
+          "tail",
+          "serve",
+          "stop",
+          "export",
+          "reset",
+          "search",
+          "history",
+          "changes",
+          "backup",
+          "restore",
+          "receipt",
+          "capabilities",
+          "hooks",
+          "skill",
+          "launcher",
+          "service",
+          "release",
+          "hook",
+          "help",
+          "version"
+        ],
+        "features": {
+          "context": true,
+          "incrementalContext": true,
+          "search": true,
+          "nodeHistory": true,
+          "checkpointChanges": true,
+          "backupRestore": true,
+          "requestReceipts": true,
+          "writeAttribution": true,
+          "cwdFlag": true,
+          "noInit": true,
+          "rejectTruncation": true,
+          "inputTruncationMetadata": true,
+          "nodeEdgeLabel": true,
+          "searchFilters": true,
+          "searchGrouping": true,
+          "listAll": true,
+          "nodeJsonDefaults": true,
+          "nodeMultiTarget": true,
+          "checkpointDelta": true,
+          "batch": true,
+          "batchCheck": true,
+          "jsonErrors": true,
+          "asOf": true,
+          "doctor": true,
+          "editClear": true,
+          "listFilters": true,
+          "resourcePaths": true,
+          "ephemeralViewer": true
+        },
+        "resources": {
+          "cli": "<runtime>/bin/pinwhy.js",
+          "skill": "<runtime>/skills/pinwhy"
+        },
+        "exportFormats": [
+          "html",
+          "markdown",
+          "mermaid",
+          "sarif"
+        ],
+        "errors": {
+          "stream": "stderr",
+          "schema": "pinwhy.error.v1",
+          "codes": [
+            "unknown_command",
+            "unknown_option",
+            "missing_value",
+            "invalid_value",
+            "conflicting_options",
+            "invalid_usage",
+            "board_missing",
+            "not_found",
+            "ambiguous_ref",
+            "invalid_batch",
+            "input_too_long",
+            "request_id_conflict",
+            "request_recovery_conflict",
+            "pending_request",
+            "error"
+          ]
+        },
+        "contextContract": {
+          "readOnly": true,
+          "prescriptive": false,
+          "nextStepSelection": "agent-controlled"
+        },
+        "limits": {
+          "title": 500,
+          "detail": 20000,
+          "label": 500,
+          "summary": 12000,
+          "batchMaxOps": 500,
+          "batchMaxBytes": 4194304
+        },
+        "outputs": {
+          "init": {
+            "shape": "object",
+            "schema": "pinwhy.init.v1"
+          },
+          "status": {
+            "shape": "object",
+            "schema": "pinwhy.status.v2"
+          },
+          "doctor": {
+            "shape": "object",
+            "schema": "pinwhy.doctor.v1"
+          },
+          "node": {
+            "shape": "object",
+            "schema": "pinwhy.node-add.v2"
+          },
+          "checkpoint": {
+            "shape": "object",
+            "schema": "pinwhy.checkpoint.v1"
+          },
+          "cursor": {
+            "shape": "object",
+            "schema": "pinwhy.cursor.v1"
+          },
+          "here": {
+            "shape": "object",
+            "schema": "pinwhy.here.v2"
+          },
+          "activity": {
+            "shape": "array",
+            "items": "pinwhy.activity.v1"
+          },
+          "activity show": {
+            "shape": "object",
+            "schema": "pinwhy.activity.v1"
+          },
+          "promote": {
+            "shape": "object",
+            "schema": "pinwhy.node-add.v2"
+          },
+          "batch": {
+            "shape": "object",
+            "schema": "pinwhy.batch.v1"
+          },
+          "done": {
+            "shape": "object",
+            "schema": "pinwhy.node.v2"
+          },
+          "block": {
+            "shape": "object",
+            "schema": "pinwhy.node.v2"
+          },
+          "revive": {
+            "shape": "object",
+            "schema": "pinwhy.node.v2"
+          },
+          "edit": {
+            "shape": "object",
+            "schema": "pinwhy.node.v2"
+          },
+          "link": {
+            "shape": "object",
+            "schema": "pinwhy.edge.v1"
+          },
+          "unlink": {
+            "shape": "object",
+            "schema": "pinwhy.edge.v1"
+          },
+          "remove": {
+            "shape": "object",
+            "schema": "pinwhy.remove.v1"
+          },
+          "ls": {
+            "shape": "array",
+            "items": "pinwhy.node.v2"
+          },
+          "show": {
+            "shape": "object",
+            "schema": "pinwhy.show.v2"
+          },
+          "digest": {
+            "shape": "object",
+            "schema": "pinwhy.digest.v1"
+          },
+          "context": {
+            "shape": "object",
+            "schema": "pinwhy.context.v2"
+          },
+          "lint": {
+            "shape": "object",
+            "schema": "pinwhy.lint.v1"
+          },
+          "tail": {
+            "shape": "object",
+            "schema": "pinwhy.tail.v1"
+          },
+          "export": {
+            "shape": "object",
+            "schema": "pinwhy.export.v1"
+          },
+          "reset": {
+            "shape": "object",
+            "schema": "pinwhy.reset.v1"
+          },
+          "search": {
+            "shape": "object",
+            "schema": "pinwhy.search.v2"
+          },
+          "history": {
+            "shape": "object",
+            "schema": "pinwhy.history.v2"
+          },
+          "changes": {
+            "shape": "object",
+            "schema": "pinwhy.changes.v2"
+          },
+          "backup": {
+            "shape": "object",
+            "schema": "pinwhy.backup-receipt.v1"
+          },
+          "restore": {
+            "shape": "object",
+            "schema": "pinwhy.restore-receipt.v1"
+          },
+          "receipt": {
+            "shape": "object",
+            "schema": "pinwhy.receipt.v1"
+          },
+          "serve": {
+            "shape": "object",
+            "schema": "pinwhy.viewer.v1"
+          },
+          "capabilities": {
+            "shape": "object",
+            "schema": "pinwhy.capabilities.v1"
+          },
+          "release check": {
+            "shape": "object",
+            "schema": "pinwhy.update-check.v1"
+          }
+        },
+        "writeTargets": [
+          {
+            "path": ".pinwhy/events.jsonl",
+            "role": "log"
+          },
+          {
+            "path": ".pinwhy/lock",
+            "role": "lock"
+          },
+          {
+            "path": ".pinwhy/state.json",
+            "role": "cache"
+          },
+          {
+            "path": ".pinwhy/state.json.tmp",
+            "role": "cache-temp"
+          },
+          {
+            "path": ".pinwhy/config.json",
+            "role": "config"
+          },
+          {
+            "path": ".pinwhy/.gitignore",
+            "role": "gitignore"
+          },
+          {
+            "path": ".pinwhy/digest.md",
+            "role": "digest"
+          }
+        ]
+      }
+    },
+    {
+      "board": null,
+      "args": [
+        "capabilities",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.capabilities.v1",
+        "schemaVersion": 1,
+        "version": "<package-version>",
+        "eventVersion": 1,
+        "runtime": {
+          "minimumNode": 18,
+          "runtimeDependencies": 0
+        },
+        "commands": [
+          "init",
+          "setup",
+          "status",
+          "doctor",
+          "node",
+          "start",
+          "goal",
+          "intent",
+          "fact",
+          "vuln",
+          "hint",
+          "checkpoint",
+          "compact",
+          "cursor",
+          "focus",
+          "here",
+          "activity",
+          "promote",
+          "batch",
+          "done",
+          "block",
+          "revive",
+          "edit",
+          "link",
+          "unlink",
+          "remove",
+          "rm",
+          "ls",
+          "list",
+          "show",
+          "tree",
+          "digest",
+          "context",
+          "lint",
+          "tail",
+          "serve",
+          "stop",
+          "export",
+          "reset",
+          "search",
+          "history",
+          "changes",
+          "backup",
+          "restore",
+          "receipt",
+          "capabilities",
+          "hooks",
+          "skill",
+          "launcher",
+          "service",
+          "release",
+          "hook",
+          "help",
+          "version"
+        ],
+        "features": {
+          "context": true,
+          "incrementalContext": true,
+          "search": true,
+          "nodeHistory": true,
+          "checkpointChanges": true,
+          "backupRestore": true,
+          "requestReceipts": true,
+          "writeAttribution": true,
+          "cwdFlag": true,
+          "noInit": true,
+          "rejectTruncation": true,
+          "inputTruncationMetadata": true,
+          "nodeEdgeLabel": true,
+          "searchFilters": true,
+          "searchGrouping": true,
+          "listAll": true,
+          "nodeJsonDefaults": true,
+          "nodeMultiTarget": true,
+          "checkpointDelta": true,
+          "batch": true,
+          "batchCheck": true,
+          "jsonErrors": true,
+          "asOf": true,
+          "doctor": true,
+          "editClear": true,
+          "listFilters": true,
+          "resourcePaths": true,
+          "ephemeralViewer": true
+        },
+        "resources": {
+          "cli": "<runtime>/bin/pinwhy.js",
+          "skill": "<runtime>/skills/pinwhy"
+        },
+        "exportFormats": [
+          "html",
+          "markdown",
+          "mermaid",
+          "sarif"
+        ],
+        "errors": {
+          "stream": "stderr",
+          "schema": "pinwhy.error.v1",
+          "codes": [
+            "unknown_command",
+            "unknown_option",
+            "missing_value",
+            "invalid_value",
+            "conflicting_options",
+            "invalid_usage",
+            "board_missing",
+            "not_found",
+            "ambiguous_ref",
+            "invalid_batch",
+            "input_too_long",
+            "request_id_conflict",
+            "request_recovery_conflict",
+            "pending_request",
+            "error"
+          ]
+        },
+        "contextContract": {
+          "readOnly": true,
+          "prescriptive": false,
+          "nextStepSelection": "agent-controlled"
+        },
+        "limits": {
+          "title": 500,
+          "detail": 20000,
+          "label": 500,
+          "summary": 12000,
+          "batchMaxOps": 500,
+          "batchMaxBytes": 4194304
+        },
+        "outputs": {
+          "init": {
+            "shape": "object",
+            "schema": "pinwhy.init.v1"
+          },
+          "status": {
+            "shape": "object",
+            "schema": "pinwhy.status.v2"
+          },
+          "doctor": {
+            "shape": "object",
+            "schema": "pinwhy.doctor.v1"
+          },
+          "node": {
+            "shape": "object",
+            "schema": "pinwhy.node-add.v2"
+          },
+          "checkpoint": {
+            "shape": "object",
+            "schema": "pinwhy.checkpoint.v1"
+          },
+          "cursor": {
+            "shape": "object",
+            "schema": "pinwhy.cursor.v1"
+          },
+          "here": {
+            "shape": "object",
+            "schema": "pinwhy.here.v2"
+          },
+          "activity": {
+            "shape": "array",
+            "items": "pinwhy.activity.v1"
+          },
+          "activity show": {
+            "shape": "object",
+            "schema": "pinwhy.activity.v1"
+          },
+          "promote": {
+            "shape": "object",
+            "schema": "pinwhy.node-add.v2"
+          },
+          "batch": {
+            "shape": "object",
+            "schema": "pinwhy.batch.v1"
+          },
+          "done": {
+            "shape": "object",
+            "schema": "pinwhy.node.v2"
+          },
+          "block": {
+            "shape": "object",
+            "schema": "pinwhy.node.v2"
+          },
+          "revive": {
+            "shape": "object",
+            "schema": "pinwhy.node.v2"
+          },
+          "edit": {
+            "shape": "object",
+            "schema": "pinwhy.node.v2"
+          },
+          "link": {
+            "shape": "object",
+            "schema": "pinwhy.edge.v1"
+          },
+          "unlink": {
+            "shape": "object",
+            "schema": "pinwhy.edge.v1"
+          },
+          "remove": {
+            "shape": "object",
+            "schema": "pinwhy.remove.v1"
+          },
+          "ls": {
+            "shape": "array",
+            "items": "pinwhy.node.v2"
+          },
+          "show": {
+            "shape": "object",
+            "schema": "pinwhy.show.v2"
+          },
+          "digest": {
+            "shape": "object",
+            "schema": "pinwhy.digest.v1"
+          },
+          "context": {
+            "shape": "object",
+            "schema": "pinwhy.context.v2"
+          },
+          "lint": {
+            "shape": "object",
+            "schema": "pinwhy.lint.v1"
+          },
+          "tail": {
+            "shape": "object",
+            "schema": "pinwhy.tail.v1"
+          },
+          "export": {
+            "shape": "object",
+            "schema": "pinwhy.export.v1"
+          },
+          "reset": {
+            "shape": "object",
+            "schema": "pinwhy.reset.v1"
+          },
+          "search": {
+            "shape": "object",
+            "schema": "pinwhy.search.v2"
+          },
+          "history": {
+            "shape": "object",
+            "schema": "pinwhy.history.v2"
+          },
+          "changes": {
+            "shape": "object",
+            "schema": "pinwhy.changes.v2"
+          },
+          "backup": {
+            "shape": "object",
+            "schema": "pinwhy.backup-receipt.v1"
+          },
+          "restore": {
+            "shape": "object",
+            "schema": "pinwhy.restore-receipt.v1"
+          },
+          "receipt": {
+            "shape": "object",
+            "schema": "pinwhy.receipt.v1"
+          },
+          "serve": {
+            "shape": "object",
+            "schema": "pinwhy.viewer.v1"
+          },
+          "capabilities": {
+            "shape": "object",
+            "schema": "pinwhy.capabilities.v1"
+          },
+          "release check": {
+            "shape": "object",
+            "schema": "pinwhy.update-check.v1"
+          }
+        },
+        "writeTargets": [
+          {
+            "path": ".pinwhy/events.jsonl",
+            "role": "log"
+          },
+          {
+            "path": ".pinwhy/lock",
+            "role": "lock"
+          },
+          {
+            "path": ".pinwhy/state.json",
+            "role": "cache"
+          },
+          {
+            "path": ".pinwhy/state.json.tmp",
+            "role": "cache-temp"
+          },
+          {
+            "path": ".pinwhy/config.json",
+            "role": "config"
+          },
+          {
+            "path": ".pinwhy/.gitignore",
+            "role": "gitignore"
+          },
+          {
+            "path": ".pinwhy/digest.md",
+            "role": "digest"
+          }
+        ]
+      }
+    }
+  ]
+}

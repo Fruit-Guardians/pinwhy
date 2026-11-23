@@ -1,0 +1,680 @@
+{
+  "command": "node",
+  "cases": [
+    {
+      "board": "research",
+      "args": [
+        "node",
+        "add",
+        "note",
+        "A plain note",
+        "--detail",
+        "Body.",
+        "--tag",
+        "x",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "n1",
+          "type": "note",
+          "title": "A plain note",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "detail": "Body.",
+          "tags": [
+            "x"
+          ],
+          "author": "agent:primary",
+          "status": null,
+          "severity": null,
+          "confidence": null
+        },
+        "edge": null,
+        "edges": [],
+        "cursor": null
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "n1",
+            "type": "note",
+            "title": "A plain note",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "detail": "Body.",
+            "tags": [
+              "x"
+            ],
+            "author": "agent:primary"
+          }
+        }
+      ]
+    },
+    {
+      "board": "research",
+      "args": [
+        "node",
+        "add",
+        "experiment",
+        "Unknown type",
+        "--to",
+        "g1",
+        "--rel",
+        "inspired-by",
+        "--enter",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "n1",
+          "type": "experiment",
+          "title": "Unknown type",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "author": "agent:primary",
+          "status": null,
+          "severity": null,
+          "confidence": null
+        },
+        "edge": {
+          "id": "n1->g1:inspired-by",
+          "from": "n1",
+          "to": "g1",
+          "kind": "inspired-by",
+          "ts": "<now>",
+          "author": "agent:primary"
+        },
+        "edges": [
+          {
+            "id": "n1->g1:inspired-by",
+            "from": "n1",
+            "to": "g1",
+            "kind": "inspired-by",
+            "ts": "<now>",
+            "author": "agent:primary"
+          }
+        ],
+        "cursor": {
+          "id": "<cursor-id>",
+          "agentId": "agent:primary",
+          "from": "v1",
+          "to": "n1",
+          "at": "<now>",
+          "sessionId": "<session-id>"
+        }
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "n1",
+            "type": "experiment",
+            "title": "Unknown type",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "author": "agent:primary"
+          }
+        },
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "edge",
+          "edge": {
+            "id": "n1->g1:inspired-by",
+            "from": "n1",
+            "to": "g1",
+            "kind": "inspired-by",
+            "ts": "<now>",
+            "author": "agent:primary"
+          }
+        },
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "cursor",
+          "cursor": {
+            "id": "<cursor-id>",
+            "agentId": "agent:primary",
+            "from": "v1",
+            "to": "n1",
+            "at": "<now>",
+            "sessionId": "<session-id>"
+          }
+        }
+      ]
+    },
+    {
+      "board": "research",
+      "args": [
+        "start",
+        "Start here",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "s1",
+          "type": "start",
+          "title": "Start here",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "author": "agent:primary",
+          "status": null,
+          "severity": null,
+          "confidence": null
+        },
+        "edge": null,
+        "edges": [],
+        "cursor": null
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "s1",
+            "type": "start",
+            "title": "Start here",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "author": "agent:primary"
+          }
+        }
+      ]
+    },
+    {
+      "board": "research",
+      "args": [
+        "goal",
+        "Second goal",
+        "--status",
+        "active",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "g2",
+          "type": "goal",
+          "title": "Second goal",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "author": "agent:primary",
+          "status": "active",
+          "severity": null,
+          "confidence": null
+        },
+        "edge": null,
+        "edges": [],
+        "cursor": null
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "g2",
+            "type": "goal",
+            "title": "Second goal",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "author": "agent:primary",
+            "status": "active"
+          }
+        }
+      ]
+    },
+    {
+      "board": "research",
+      "args": [
+        "intent",
+        "Try the logout path",
+        "--relate-here",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "i2",
+          "type": "intent",
+          "title": "Try the logout path",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "author": "agent:primary",
+          "status": "open",
+          "severity": null,
+          "confidence": null
+        },
+        "edge": {
+          "id": "v1->i2:related-to",
+          "from": "v1",
+          "to": "i2",
+          "kind": "related-to",
+          "ts": "<now>",
+          "author": "agent:primary"
+        },
+        "edges": [
+          {
+            "id": "v1->i2:related-to",
+            "from": "v1",
+            "to": "i2",
+            "kind": "related-to",
+            "ts": "<now>",
+            "author": "agent:primary"
+          }
+        ],
+        "cursor": null
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "i2",
+            "type": "intent",
+            "title": "Try the logout path",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "author": "agent:primary",
+            "status": "open"
+          }
+        },
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "edge",
+          "edge": {
+            "id": "v1->i2:related-to",
+            "from": "v1",
+            "to": "i2",
+            "kind": "related-to",
+            "ts": "<now>",
+            "author": "agent:primary"
+          }
+        }
+      ]
+    },
+    {
+      "board": "research",
+      "args": [
+        "fact",
+        "Logout keeps the id",
+        "--confidence",
+        "reproduced",
+        "--at",
+        "src/auth.js:42",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "f5",
+          "type": "fact",
+          "title": "Logout keeps the id",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "author": "agent:primary",
+          "confidence": "reproduced",
+          "loc": {
+            "path": "src/auth.js",
+            "line": 42
+          },
+          "status": null,
+          "severity": null
+        },
+        "edge": null,
+        "edges": [],
+        "cursor": null
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "f5",
+            "type": "fact",
+            "title": "Logout keeps the id",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "author": "agent:primary",
+            "confidence": "reproduced",
+            "loc": {
+              "path": "src/auth.js",
+              "line": 42
+            }
+          }
+        }
+      ]
+    },
+    {
+      "board": "research",
+      "args": [
+        "vuln",
+        "Cookie scope too wide",
+        "--sev",
+        "medium",
+        "--parent",
+        "f2",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "v2",
+          "type": "vuln",
+          "title": "Cookie scope too wide",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "author": "agent:primary",
+          "severity": "medium",
+          "parent": "f2",
+          "status": null,
+          "confidence": null
+        },
+        "edge": {
+          "id": "f2->v2:related-to",
+          "from": "f2",
+          "to": "v2",
+          "kind": "related-to",
+          "ts": "<now>",
+          "author": "agent:primary"
+        },
+        "edges": [
+          {
+            "id": "f2->v2:related-to",
+            "from": "f2",
+            "to": "v2",
+            "kind": "related-to",
+            "ts": "<now>",
+            "author": "agent:primary"
+          }
+        ],
+        "cursor": null
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "v2",
+            "type": "vuln",
+            "title": "Cookie scope too wide",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "author": "agent:primary",
+            "severity": "medium",
+            "parent": "f2"
+          }
+        },
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "edge",
+          "edge": {
+            "id": "f2->v2:related-to",
+            "from": "f2",
+            "to": "v2",
+            "kind": "related-to",
+            "ts": "<now>",
+            "author": "agent:primary"
+          }
+        }
+      ]
+    },
+    {
+      "board": "research",
+      "args": [
+        "fact",
+        "Shared evidence",
+        "--to",
+        "g1",
+        "--to",
+        "f2",
+        "--rel",
+        "supports",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "f5",
+          "type": "fact",
+          "title": "Shared evidence",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "author": "agent:primary",
+          "status": null,
+          "severity": null,
+          "confidence": null
+        },
+        "edge": {
+          "id": "f5->g1:supports",
+          "from": "f5",
+          "to": "g1",
+          "kind": "supports",
+          "ts": "<now>",
+          "author": "agent:primary"
+        },
+        "edges": [
+          {
+            "id": "f5->g1:supports",
+            "from": "f5",
+            "to": "g1",
+            "kind": "supports",
+            "ts": "<now>",
+            "author": "agent:primary"
+          },
+          {
+            "id": "f5->f2:supports",
+            "from": "f5",
+            "to": "f2",
+            "kind": "supports",
+            "ts": "<now>",
+            "author": "agent:primary"
+          }
+        ],
+        "cursor": null
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "f5",
+            "type": "fact",
+            "title": "Shared evidence",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "author": "agent:primary"
+          }
+        },
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "edge",
+          "edge": {
+            "id": "f5->g1:supports",
+            "from": "f5",
+            "to": "g1",
+            "kind": "supports",
+            "ts": "<now>",
+            "author": "agent:primary"
+          }
+        },
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "edge",
+          "edge": {
+            "id": "f5->f2:supports",
+            "from": "f5",
+            "to": "f2",
+            "kind": "supports",
+            "ts": "<now>",
+            "author": "agent:primary"
+          }
+        }
+      ]
+    },
+    {
+      "board": "research",
+      "args": [
+        "hint",
+        "Compare with the SSO handler",
+        "--agent",
+        "agent:reviewer",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "h2",
+          "type": "hint",
+          "title": "Compare with the SSO handler",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "author": "agent:reviewer",
+          "status": null,
+          "severity": null,
+          "confidence": null
+        },
+        "edge": null,
+        "edges": [],
+        "cursor": null
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "h2",
+            "type": "hint",
+            "title": "Compare with the SSO handler",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "author": "agent:reviewer"
+          }
+        }
+      ]
+    },
+    {
+      "board": "research",
+      "args": [
+        "fact",
+        "x",
+        "--request-id",
+        "req-new-1",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.node-add.v2",
+        "node": {
+          "id": "f5",
+          "type": "fact",
+          "title": "x",
+          "ts": "<now>",
+          "session": "<session-id>",
+          "author": "agent:primary",
+          "status": null,
+          "severity": null,
+          "confidence": null
+        },
+        "edge": null,
+        "edges": [],
+        "cursor": null
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "node",
+          "node": {
+            "id": "f5",
+            "type": "fact",
+            "title": "x",
+            "ts": "<now>",
+            "session": "<session-id>",
+            "author": "agent:primary"
+          },
+          "request": {
+            "requestId": "req-new-1",
+            "command": "addNode",
+            "fingerprint": "780b422045ee444bec0d537bf2727950ed1319189bfdac7cf7ef7fc272eeea5e",
+            "tailEvents": [],
+            "at": "<now>"
+          }
+        },
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "receipt",
+          "requestId": "req-new-1",
+          "command": "addNode",
+          "fingerprint": "780b422045ee444bec0d537bf2727950ed1319189bfdac7cf7ef7fc272eeea5e",
+          "eventIds": [
+            "<event-id>"
+          ],
+          "at": "<now>"
+        }
+      ]
+    },
+    {
+      "board": null,
+      "args": [
+        "goal",
+        "No board yet",
+        "--no-init",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 1,
+      "output": null
+    }
+  ]
+}

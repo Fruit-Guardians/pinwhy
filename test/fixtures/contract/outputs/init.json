@@ -1,0 +1,34 @@
+{
+  "command": "init",
+  "cases": [
+    {
+      "board": null,
+      "args": [
+        "init",
+        "--title",
+        "New board",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.init.v1",
+        "cwd": "<root>/board",
+        "board": "<root>/board/.pinwhy",
+        "title": "New board",
+        "session": "<session-id>"
+      },
+      "events": [
+        {
+          "eventVersion": 1,
+          "eventId": "<event-id>",
+          "op": "meta",
+          "set": {
+            "title": "New board"
+          }
+        }
+      ]
+    }
+  ]
+}

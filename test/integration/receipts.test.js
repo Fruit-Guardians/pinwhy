@@ -1,0 +1,387 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFile, spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+import {
+  addNode, addEdge, patchNode, removeNode, removeEdge, moveCursor,
+  addCheckpoint, addActivity, setMeta, reset, ensure, paths, readEvents,
+  replay, getReceipt, withLock, appendEvent, readState,
+} from '../../lib/store.js';
+import { applyAll, emptyGraph } from '../../lib/domain/model.js';
+
+const CLI = fileURLToPath(new URL('../../bin/pinwhy.js', import.meta.url));
+
+function fixture(t) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinwhy-receipts-'));
+  ensure(dir);
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
+const log = (dir) => fs.readFileSync(paths(dir).events, 'utf8');
+
+function appendFault(t, dir, behavior) {
+  const original = fs.appendFileSync;
+  fs.appendFileSync = function(file, content, ...options) {
+    if (file === paths(dir).events) return behavior(original, file, content, options);
+    return original.call(this, file, content, ...options);
+  };
+  const restore = () => { fs.appendFileSync = original; };
+  t.after(restore);
+  return restore;
+}
+
+test('1000 same-ID retries return the original compound result and append once', (t) => {
+  const dir = fixture(t);
+  const parent = addNode({ type: 'goal', title: 'research' }, dir).node;
+  const input = { requestId: 'compound-1000', type: 'observation', title: 'response', parent: parent.id, relation: 'supports', enter: true };
+  const first = addNode(input, dir);
+  const before = log(dir);
+  for (let i = 0; i < 1000; i++) assert.deepEqual(addNode(input, dir), first);
+  assert.equal(log(dir), before);
+  const events = readEvents(dir).events;
+  assert.deepEqual(events.map((ev) => ev.op), ['node', 'node', 'edge', 'cursor', 'receipt']);
+  const receipt = getReceipt(input.requestId, dir);
+  assert.equal(receipt.status, 'committed');
+  assert.deepEqual(receipt.result, first);
+  assert.equal(receipt.eventIds.length, 3);
+  assert.equal(replay(dir).integrity.unknownOps, 0);
+  // An old projection ignoring the additive marker still receives every
+  // ordinary graph/cursor event, not an opaque transaction operation.
+  const legacy = applyAll(emptyGraph(), events.filter((ev) => ev.op !== 'receipt'));
+  assert.deepEqual(replay(dir).nodes, legacy.nodes);
+  assert.deepEqual(replay(dir).edges, legacy.edges);
+  assert.deepEqual(replay(dir).cursors, legacy.cursors);
+});
+
+test('lost response after commit resolves from the log even after cache loss', (t) => {
+  const dir = fixture(t);
+  const input = { requestId: 'response-lost', type: 'note', title: 'committed', enter: true };
+  const restore = appendFault(t, dir, (append, file, content, options) => {
+    append(file, content, ...options);
+    throw new Error('injected response lost after append');
+  });
+  assert.throws(() => addNode(input, dir), /injected response lost/);
+  restore();
+  const before = log(dir);
+  const receipt = getReceipt(input.requestId, dir);
+  assert.equal(receipt.status, 'committed');
+  assert.deepEqual(addNode(input, dir), receipt.result);
+  assert.equal(log(dir), before);
+  assert.equal(Object.keys(replay(dir).nodes).length, 1);
+  assert.equal(readState(dir).focus, receipt.result.node.id);
+});
+
+test('failure before append leaves no receipt or graph action', (t) => {
+  const dir = fixture(t);
+  const input = { requestId: 'pre-commit', title: 'not committed yet' };
+  const restore = appendFault(t, dir, () => { throw new Error('injected before append'); });
+  assert.throws(() => addNode(input, dir), /injected before append/);
+  restore();
+  assert.equal(getReceipt(input.requestId, dir), null);
+  assert.equal(Object.keys(replay(dir).nodes).length, 0);
+  assert.equal(addNode(input, dir).node.id, 'n1');
+});
+
+test('partial compound prefix is query-only until its exact retry completes it', (t) => {
+  const dir = fixture(t);
+  const parent = addNode({ title: 'parent' }, dir).node;
+  const input = { requestId: 'partial-compound', title: 'child', parent: parent.id, enter: true };
+  const restore = appendFault(t, dir, (append, file, content, options) => {
+    // node and edge survive; cursor is a torn incomplete line, marker absent.
+    const lines = content.trimEnd().split('\n');
+    append(file, `${lines.slice(0, 2).join('\n')}\n${lines[2].slice(0, 30)}`, ...options);
+    throw new Error('injected partial append');
+  });
+  assert.throws(() => addNode(input, dir), /injected partial append/);
+  restore();
+  const before = log(dir);
+  const receipt = getReceipt(input.requestId, dir);
+  assert.equal(receipt.status, 'pending');
+  assert.equal(receipt.recoverable, true);
+  assert.equal(receipt.committedEventIds.length, 2);
+  assert.equal(log(dir), before, 'receipt query must not repair the tail or append');
+  assert.throws(() => addNode({ title: 'unrelated' }, dir), /pending_request/);
+  assert.equal(log(dir), before);
+  assert.deepEqual(addNode(input, dir), receipt.result);
+  assert.equal(getReceipt(input.requestId, dir).status, 'committed');
+  const g = replay(dir);
+  assert.equal(Object.keys(g.nodes).length, 2);
+  assert.equal(Object.keys(g.edges).length, 1);
+  assert.equal(g.cursors['agent:primary'].to, receipt.result.node.id);
+  assert.equal(readEvents(dir).events.filter((ev) => ev.op === 'cursor').length, 1);
+});
+
+test('pending recovery never silently reorders an older writer later action', (t) => {
+  const dir = fixture(t);
+  const input = { requestId: 'older-writer-interference', title: 'node', enter: true };
+  const restore = appendFault(t, dir, (append, file, content, options) => {
+    append(file, `${content.split('\n')[0]}\n`, ...options);
+    throw new Error('prefix only');
+  });
+  assert.throws(() => addNode(input, dir), /prefix only/);
+  restore();
+  // Simulate an older version that doesn't understand receipt metadata.
+  withLock(() => appendEvent({ op: 'meta', set: { title: 'later action' } }, dir), dir);
+  const before = log(dir);
+  assert.equal(getReceipt(input.requestId, dir).recoverable, false);
+  assert.throws(() => addNode(input, dir), /request_recovery_conflict/);
+  assert.equal(log(dir), before);
+});
+
+test('payload or command mismatch rejects without appending; key order does not matter', (t) => {
+  const dir = fixture(t);
+  const first = addNode({ title: 'same', type: 'note', requestId: 'same-id' }, dir);
+  const before = log(dir);
+  assert.deepEqual(addNode({ requestId: 'same-id', type: 'note', title: 'same' }, dir), first);
+  assert.throws(() => addNode({ requestId: 'same-id', title: 'different', type: 'note' }, dir), /request_id_conflict/);
+  assert.throws(() => addCheckpoint({ requestId: 'same-id', summary: 'same' }, dir), /request_id_conflict/);
+  assert.equal(log(dir), before);
+});
+
+test('retry resolves before stale object or expected-field validation', (t) => {
+  const dir = fixture(t);
+  const a = addNode({ title: 'a' }, dir).node;
+  const b = addNode({ title: 'b' }, dir).node;
+  const edgeInput = { from: a.id, to: b.id, requestId: 'edge' };
+  const edge = addEdge(edgeInput, dir);
+  const patch = { title: 'changed' };
+  const options = { requestId: 'patch', expected: { title: 'a' } };
+  const updated = patchNode(a.id, patch, dir, options);
+  const removed = removeNode(a.id, { requestId: 'remove' }, dir);
+  const before = log(dir);
+  assert.deepEqual(addEdge(edgeInput, dir), edge);
+  assert.deepEqual(patchNode(a.id, patch, dir, options), updated);
+  assert.deepEqual(removeNode(a.id, { requestId: 'remove' }, dir), removed);
+  assert.equal(log(dir), before);
+});
+
+test('all mutation entry points use the same request namespace and stored result', (t) => {
+  const dir = fixture(t);
+  const a = addNode({ title: 'a' }, dir).node;
+  const b = addNode({ title: 'b' }, dir).node;
+  const edge = addEdge({ from: a.id, to: b.id }, dir);
+  const calls = [
+    () => moveCursor(a.id, { requestId: 'cursor' }, dir),
+    () => addActivity({ tool: 'test', summary: 'test', requestId: 'activity' }, dir),
+    () => addCheckpoint({ summary: 'handoff', requestId: 'checkpoint' }, dir),
+    () => removeEdge({ id: edge.id }, { requestId: 'unlink' }, dir),
+    () => setMeta({ title: 'board' }, dir, { requestId: 'meta' }),
+  ];
+  for (const call of calls) {
+    const first = call();
+    const before = log(dir);
+    assert.deepEqual(call(), first);
+    assert.equal(log(dir), before);
+  }
+});
+
+test('request namespace spans reset; retrying reset does not clear newer work', (t) => {
+  const dir = fixture(t);
+  const beforeReset = addNode({ requestId: 'old-node', title: 'old' }, dir);
+  const resetResult = reset(dir, { requestId: 'reset-once' });
+  const current = addNode({ title: 'new' }, dir);
+  const before = log(dir);
+  assert.deepEqual(reset(dir, { requestId: 'reset-once' }), resetResult);
+  assert.deepEqual(addNode({ requestId: 'old-node', title: 'old' }, dir), beforeReset);
+  assert.equal(log(dir), before);
+  assert.deepEqual(Object.keys(replay(dir).nodes), [current.node.id]);
+  assert.throws(() => addNode({ requestId: 'old-node', title: 'new payload' }, dir), /request_id_conflict/);
+});
+
+test('a failed disposable state-cache write does not invalidate a committed receipt', (t) => {
+  const dir = fixture(t);
+  fs.rmSync(paths(dir).state);
+  fs.mkdirSync(paths(dir).state);
+  const input = { title: 'survives cache failure', enter: true, requestId: 'cache-failure' };
+  const first = addNode(input, dir);
+  const before = log(dir);
+  assert.equal(getReceipt(input.requestId, dir).status, 'committed');
+  assert.deepEqual(addNode(input, dir), first);
+  assert.equal(log(dir), before);
+  assert.equal(readState(dir).focus, first.node.id);
+});
+
+test('request IDs are validated and receipt misses are read-only', (t) => {
+  const dir = fixture(t);
+  const before = log(dir);
+  for (const requestId of ['', ' ', ' id', 'id ', 'line\nbreak', 'x'.repeat(201), 12, {}, []]) {
+    assert.throws(() => addNode({ title: 'bad ID', requestId }, dir), /requestId/);
+  }
+  assert.equal(getReceipt('missing', dir), null);
+  assert.equal(log(dir), before);
+});
+
+test('concurrent same-ID requests in separate processes create one compound action', async (t) => {
+  const dir = fixture(t);
+  const parent = addNode({ title: 'parent' }, dir).node;
+  const storeUrl = new URL('../../lib/store.js', import.meta.url).href;
+  const input = { type: 'note', title: 'concurrent', parent: parent.id, enter: true, requestId: 'shared-concurrent' };
+  const source = `import {addNode} from ${JSON.stringify(storeUrl)}; process.stdout.write(JSON.stringify(addNode(${JSON.stringify(input)},${JSON.stringify(dir)})));`;
+  const run = promisify(execFile);
+  const results = await Promise.all(Array.from({ length: 8 }, () => run(process.execPath, ['--input-type=module', '-e', source], { encoding: 'utf8', timeout: 20000 })));
+  const first = JSON.parse(results[0].stdout);
+  for (const result of results) assert.deepEqual(JSON.parse(result.stdout), first);
+  const g = replay(dir);
+  assert.equal(Object.keys(g.nodes).length, 2);
+  assert.equal(Object.keys(g.edges).length, 1);
+  assert.equal(g.cursorTrail.length, 1);
+  assert.equal(readEvents(dir).events.filter((ev) => ev.op === 'receipt').length, 1);
+});
+
+test('1000 independent request receipts project in one pass and survive cache loss', async (t) => {
+  const dir = fixture(t);
+  const { projectReceipts } = await import('../../lib/domain/receipts.js');
+  const results = [];
+  for (let index = 0; index < 1000; index++) {
+    results.push(addNode({ title: `independent ${index}`, requestId: `independent-${index}` }, dir));
+  }
+  fs.rmSync(paths(dir).state, { force: true });
+  const before = log(dir);
+  const receipts = projectReceipts(readEvents(dir).events);
+  assert.equal(receipts.size, 1000);
+  for (let index = 0; index < 1000; index++) {
+    const receipt = receipts.get(`independent-${index}`);
+    assert.equal(receipt.status, 'committed');
+    assert.deepEqual(receipt.result, results[index]);
+    assert.deepEqual(receipt.eventIds, receipt.committedEventIds);
+  }
+  for (const index of [0, 499, 999]) {
+    assert.deepEqual(getReceipt(`independent-${index}`, dir).result, results[index]);
+    assert.deepEqual(addNode({ title: `independent ${index}`, requestId: `independent-${index}` }, dir), results[index]);
+  }
+  assert.equal(log(dir), before);
+  assert.equal(Object.keys(replay(dir).nodes).length, 1000);
+});
+
+test('optimistic tags and canonical locations compare stored values inside the mutation', (t) => {
+  const dir = fixture(t);
+  const node = addNode({ title: 'Original', tags: ['a', 'b'], at: 'src/a.js:1' }, dir).node;
+  const set = { tags: ['reviewed'], loc: { path: 'src/a.js', line: 2 } };
+  const expected = { tags: ['a', 'b'], loc: { path: 'src/a.js', line: 1 } };
+  const options = { expected, requestId: 'structured-originals' };
+  const edited = patchNode(node.id, set, dir, options);
+  assert.deepEqual(edited.tags, ['reviewed']);
+  assert.deepEqual(edited.loc, { path: 'src/a.js', line: 2 });
+  const before = log(dir);
+  assert.deepEqual(patchNode(node.id, set, dir, options), edited, 'same request retains its original result despite stale originals');
+  assert.equal(log(dir), before);
+  assert.throws(() => patchNode(node.id, { tags: ['overwrite'], loc: null }, dir, { expected }),
+    (error) => error.status === 409 && error.fields.join(',') === 'tags,loc');
+  assert.equal(log(dir), before);
+  assert.deepEqual(replay(dir).nodes[node.id].tags, ['reviewed']);
+  assert.deepEqual(replay(dir).nodes[node.id].loc, { path: 'src/a.js', line: 2 });
+});
+
+test('structured originals preserve tag order and absent canonical location fields', (t) => {
+  const dir = fixture(t);
+  const node = addNode({ title: 'Baseline', tags: ['a', 'b'], at: 'src/a.js' }, dir).node;
+  const before = log(dir);
+  for (const expected of [
+    { tags: ['b', 'a'] }, { tags: null }, { loc: { path: 'src/a.js', line: null } },
+    { loc: { path: 'src/a.js', column: null } }, { loc: null },
+  ]) {
+    assert.throws(() => patchNode(node.id, { detail: 'Must not append' }, dir, { expected }), (error) => error.status === 409);
+    assert.equal(log(dir), before);
+  }
+  const absent = addNode({ title: 'Unset tags and location' }, dir).node;
+  assert.deepEqual(patchNode(absent.id, { tags: [], loc: null }, dir, { expected: { tags: null, loc: null } }).tags, []);
+  const afterClear = log(dir);
+  assert.throws(() => patchNode(absent.id, { tags: ['new'] }, dir, { expected: { tags: null } }), (error) => error.status === 409);
+  assert.equal(log(dir), afterClear);
+  assert.deepEqual(patchNode(absent.id, { tags: ['new'] }, dir, { expected: { tags: [], loc: null } }).tags, ['new']);
+});
+
+test('compact addNode receipts store large detail once and stay compatible with legacy full-plan logs', (t) => {
+  const dir = fixture(t);
+  const body = 'single-copy-evidence-'.repeat(250);
+  const input = { type: 'observation', title: 'Compact node', detail: body, requestId: 'compact-node-1', enter: true };
+  const created = addNode(input, dir);
+  const eventsText = log(dir);
+  assert.equal(eventsText.split(body).length - 1, 1, 'addNode detail is persisted once');
+  const receipt = getReceipt('compact-node-1', dir);
+  assert.equal(receipt.status, 'committed');
+  assert.deepEqual(receipt.result, created);
+  assert.deepEqual(addNode(input, dir), created);
+
+  // Hand-crafted legacy full-plan receipt still resolves cleanly alongside compact logs.
+  const legacyDir = fixture(t);
+  const legacyNode = { id: 'n1', type: 'note', title: 'Legacy node', ts: 100 };
+  const legacyEv = { eventVersion: 1, eventId: 'event_legacy_1', op: 'node', node: legacyNode };
+  const legacyResult = { node: legacyNode, edge: null, edges: [], cursor: null };
+  const legacyFirst = {
+    ...legacyEv,
+    request: { requestId: 'legacy-1', command: 'addNode', fingerprint: 'legacy-fp', result: legacyResult, events: [legacyEv], at: 100 },
+  };
+  const legacyMarker = { eventVersion: 1, eventId: 'event_legacy_2', op: 'receipt', requestId: 'legacy-1', command: 'addNode', fingerprint: 'legacy-fp', eventIds: ['event_legacy_1'], at: 100 };
+  fs.writeFileSync(paths(legacyDir).events, `${JSON.stringify(legacyFirst)}\n${JSON.stringify(legacyMarker)}\n`);
+  const legacyReceipt = getReceipt('legacy-1', legacyDir);
+  assert.equal(legacyReceipt.status, 'committed');
+  assert.deepEqual(legacyReceipt.result, legacyResult);
+});
+
+test('stale valid state.json after committed setMeta or reset never leaks old session to readers or writes', (t) => {
+  const dir = fixture(t);
+  setMeta({ session: 'session_initial', title: 'Initial title' }, dir);
+  const preMetaStateBytes = fs.readFileSync(paths(dir).state, 'utf8');
+
+  // 1) Simulate crash after receipt marker committed on setMeta, before state.json was updated.
+  const updated = setMeta({ session: 'session_after_meta', title: 'Updated title' }, dir, { requestId: 'meta-crash' });
+  assert.equal(updated.session, 'session_after_meta');
+  fs.writeFileSync(paths(dir).state, preMetaStateBytes);
+
+  // Read-only readState detects the log size mismatch and rebuilds without touching state.json.
+  assert.equal(readState(dir).session, 'session_after_meta');
+  assert.equal(readState(dir).title, 'Updated title');
+  assert.equal(fs.readFileSync(paths(dir).state, 'utf8'), preMetaStateBytes);
+
+  // Subsequent mutation under lock uses the new session rather than the stale cached session.
+  const createdAfterMeta = addNode({ type: 'note', title: 'post-meta-crash' }, dir);
+  assert.equal(createdAfterMeta.node.session, 'session_after_meta');
+
+  // Same-ID retry returns the committed result without appending events and heals stale state.json.
+  const preResetStateBytes = fs.readFileSync(paths(dir).state, 'utf8');
+  const afterReset = reset(dir, { requestId: 'reset-crash' });
+  fs.writeFileSync(paths(dir).state, preResetStateBytes);
+  assert.equal(readState(dir).session, afterReset.session);
+  assert.equal(readState(dir).title, '');
+
+  const logBeforeRetry = log(dir);
+  assert.deepEqual(reset(dir, { requestId: 'reset-crash' }), afterReset);
+  assert.equal(log(dir), logBeforeRetry);
+  const createdAfterReset = addNode({ type: 'note', title: 'post-reset-crash' }, dir);
+  assert.equal(createdAfterReset.node.session, afterReset.session);
+});
+
+test('non-receipted reset preserves one consistent session across checkpoint, cache invalidation, and CLI writes', (t) => {
+  const dir = fixture(t);
+  const resetState = reset(dir);
+  const first = addNode({ type: 'fact', title: 'first post-reset note' }, dir).node;
+  const cp = addCheckpoint({ summary: 'mid-session checkpoint' }, dir);
+  const second = addNode({ type: 'fact', title: 'second post-checkpoint note' }, dir).node;
+  assert.equal(first.session, resetState.session);
+  assert.equal(cp.sessionId, resetState.session);
+  assert.equal(second.session, resetState.session);
+  fs.rmSync(paths(dir).state, { force: true });
+  assert.equal(readState(dir).session, resetState.session);
+
+  // Exercise the default CLI path without --request-id end-to-end.
+  const cliDir = fixture(t);
+  const runCli = (args) => {
+    const res = spawnSync(process.execPath, [CLI, ...args, '--cwd', cliDir, '--json'], { encoding: 'utf8' });
+    assert.equal(res.status, 0, res.stderr || res.stdout);
+    return JSON.parse(res.stdout);
+  };
+  const cliReset = runCli(['reset', '--yes']);
+  const cliFirst = runCli(['fact', 'first cli node']);
+  const cliCheckpoint = runCli(['checkpoint', 'cli checkpoint']);
+  const cliSecond = runCli(['fact', 'second cli node']);
+  assert.equal(cliFirst.node.session, cliReset.session);
+  assert.equal(cliCheckpoint.sessionId, cliReset.session);
+  assert.equal(cliSecond.node.session, cliReset.session);
+  fs.rmSync(paths(cliDir).state, { force: true });
+  assert.equal(readState(cliDir).session, cliReset.session);
+});

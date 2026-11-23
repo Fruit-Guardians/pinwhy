@@ -1,0 +1,72 @@
+# Pinwhy
+
+> External memory and a visual workspace for AI agents. Pinwhy keeps an agent's judgments, evidence, relations, and current position in the project (`.pinwhy/events.jsonl`), so work resumes from the same place after context compaction, a dropped connection, or a new session. Zero runtime dependencies, Node.js ≥ 18, MIT licensed, data stays local.
+
+中文：Pinwhy 是与宿主无关的 Agent 外置记忆与可视化工作台。把关键判断、正反证据、显式关系与当前位置记在项目本地（`.pinwhy/events.jsonl`）；上下文压缩、断线或切换会话之后，按预算读回同一份现场继续工作。
+
+## What it is (and isn't)
+
+- `.pinwhy/events.jsonl` is the append-only single source of truth. `state.json`, `context`, `digest`, the live viewer, and exports are read-only projections rebuilt from events — never a second source of truth.
+- Records goals, observations, facts, hypotheses, questions, findings, vulnerabilities, conditions, and custom types, plus relations explicitly declared by the recorder (`supports`, `contradicts`, `derived-from`, `depends-on`, `answers`, `refines`, `supersedes`, `related-to`, …).
+- Nothing is inferred: creating a node never auto-links edges or moves the cursor. `severity`, `status`, and `confidence` (`suspected`, `static-confirmed`, `reproduced`, `confirmed`) are orthogonal dimensions and never inferred from each other or from node type.
+- Non-interfering by design: `context` returns `{ readOnly: true, prescriptive: false, nextStepSelection: "agent-controlled" }`; `lint` always exits `0` (reports only, never blocks). The agent always decides the next step.
+- The local web workspace listens on `127.0.0.1:4333` by default (`--read-only` disables browser writes) and supports two reading modes over the same authored board:
+  - **General mode**: Context / Logic / Overview views plus an experimental 2.5D circuit-board view.
+  - **Security audit mode**: collapsible `Issue ▸ Candidate` outline, orthogonal Candidate Matrix (`severity × confidence × status`), Two-Wing Dialectical Dossier (`Supports & tethered premises` vs `Contradictions & required conditions`), `Dossier ⇄ Argument graph` switch, and factual multi-actor provenance cues (`Open dispute`, `Cross-verified`, `Single-source`) when multiple authors exist.
+
+## Install & set up for the user
+
+Follow the official setup guide (`skills/pinwhy/references/setup.md`). Do not initialize a board or install host hooks/skills without explicit user consent, and always keep existing board records intact.
+
+1. Install the stable CLI, web workspace, and full Skill package (`Node.js ≥ 18`):
+   ```sh
+   npm install --global pinwhy@0.2.0
+   pinwhy --version
+   ```
+   (When developing from a source checkout, `node bin/pinwhy.js release install` can install an immutable local release under `~/.local/bin` instead; daily use never runs against a dev branch.)
+
+2. Connect the project for the user's host (always pass explicit `--cwd "/abs/path/to/project"`):
+   - **Claude Code** (Skill + recovery-only hooks + user-level shared background viewer):
+     ```sh
+     pinwhy setup --target "/abs/path/to/project" --title "My project" --open
+     ```
+   - **Codex, Cursor, Gemini CLI, Copilot CLI, OpenCode, OMP** (multi-host Skill installer; shares `.agents/skills/pinwhy/` for generic Agent Skills hosts; add `--user` for global scope):
+     ```sh
+     pinwhy init --title "My project" --cwd "/abs/path/to/project"
+     pinwhy skill install --host <claude|codex|cursor|gemini|copilot|opencode|omp> --cwd "/abs/path/to/project"
+     pinwhy serve --open --cwd "/abs/path/to/project"
+     ```
+     (Humans in an interactive terminal can run `pinwhy skill install` without `--host` to pick scope and hosts interactively.)
+   - **DeepSeek Harness (`0.2.2-rc.2`)** — independent adapter subpackage in `plugins/dsh-pinwhy/`:
+     ```sh
+     dsh plugin --profile web add /abs/path/to/pinwhy/plugins/dsh-pinwhy
+     pinwhy init --cwd "/abs/path/to/project" --json
+     ```
+     Then select the project workspace in DSH Settings (or configure `cordis.patch.yml`). Provides 11 typed native tools and an embedded read-only canvas.
+   - **Other hosts**: copy the complete `skills/pinwhy/` directory (including `references/`, `methods/`, `agents/`, and `assets/`) into the host's Skill directory and resolve CLI placeholders; do not install another host's hooks.
+   - **CLI only**:
+     ```sh
+     pinwhy init --title "My project" --cwd "/abs/path/to/project"
+     pinwhy serve --open --cwd "/abs/path/to/project"
+     ```
+
+3. Verify: `pinwhy status --cwd "/abs/path/to/project"` and `pinwhy doctor --cwd "/abs/path/to/project"`. Trust the URL reported by `status` (default `http://127.0.0.1:4333`). Remember that installed Skill files do not automatically mean the current session has loaded the Skill — verify in a new session if needed.
+
+## Everyday commands
+
+Always include `--cwd "/abs/path/to/project"` (and `--no-init` on write commands so a typo never creates a stray board; `--agent <id>` for multi-agent work; `--no-truncate` when `capabilities.features.rejectTruncation` is enabled):
+
+- **Restore**: `pinwhy context --budget 4000 --cwd "/abs/path/to/project"`, `pinwhy context --since <checkpoint> --cwd "/abs/path/to/project"`, `pinwhy here --cwd "/abs/path/to/project"`
+- **Record**: `pinwhy node add <type> "title" --detail "…" [--to <id> --rel supports] --cwd "/abs/path/to/project" --no-init`, `pinwhy link <from> <to> --rel <relation> --cwd "/abs/path/to/project" --no-init`, `pinwhy batch --file ops.jsonl --cwd "/abs/path/to/project" --no-init`
+- **Cursor & checkpoint**: `pinwhy cursor <id> --reason "…" --cwd "/abs/path/to/project" --no-init`, `pinwhy checkpoint --summary "…" --cwd "/abs/path/to/project" --no-init`
+- **Inspect**: `pinwhy status --cwd "/abs/path/to/project"`, `pinwhy search --type finding --group-by severity,status --json --cwd "/abs/path/to/project"`, `pinwhy show <id> --cwd "/abs/path/to/project"`
+- **Export & backup**: `pinwhy export --format markdown|mermaid|sarif --cwd "/abs/path/to/project"`, `pinwhy export --out board.html --cwd "/abs/path/to/project"`, `pinwhy backup --out ../pinwhy-backup --cwd "/abs/path/to/project"` (full-board PNG export is also available in the web workspace).
+
+## Docs
+
+- [README](https://github.com/Fruit-Guardians/pinwhy#readme): overview, install, and daily workflow
+- [Agent setup guide](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy/references/setup.md): host integrations, Skill installation, and service lifecycle
+- [Recording semantics](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy/references/recording.md): node fields, relation directions (`from relation to`), and search
+- [Parallel agents](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy/references/parallel-agents.md): multi-agent identity and handoff
+- [Optional recording methods](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy/methods/INDEX.md): optional `audit`, `inquiry`, `adversarial-review`, and `threat-model` references (and standalone `skills/pinwhy-code-audit/` scenario package)
+- [Documentation index](https://github.com/Fruit-Guardians/pinwhy/blob/main/docs/README.md) & [Engineering principles](https://github.com/Fruit-Guardians/pinwhy/blob/main/AGENT.md)

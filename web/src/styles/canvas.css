@@ -1,0 +1,202 @@
+/* ---- React Flow ------------------------------------------------------- */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-background-pattern-dots-color-default: var(--line-strong);
+  --xy-edge-stroke-default: var(--edge-link);
+  --xy-edge-stroke-width-default: 1.5;
+  --xy-edge-label-background-color-default: var(--bg);
+  --xy-edge-label-color-default: var(--ink-3);
+  --xy-node-boxshadow-selected-default: none;
+  --xy-minimap-background-color-default: var(--surface);
+  --xy-minimap-mask-background-color-default: color-mix(in srgb, var(--bg) 70%, transparent);
+  --xy-minimap-mask-stroke-color-default: var(--line-strong);
+  --xy-minimap-mask-stroke-width-default: 1;
+}
+.react-flow__edge-path {
+  stroke: var(--edge-link);
+  vector-effect: non-scaling-stroke;
+  transition: stroke .15s, opacity .15s;
+}
+/* Separate links from the background grid; keep family colours readable when zoomed out. */
+.react-flow {
+  --edge-link: color-mix(in srgb, var(--ink-3) 65%, var(--line-strong));
+  --edge-support: color-mix(in srgb, var(--rel-support) 85%, var(--line-strong));
+  --edge-oppose: color-mix(in srgb, var(--rel-oppose) 85%, var(--line-strong));
+  --edge-derive: color-mix(in srgb, var(--rel-derive) 85%, var(--line-strong));
+  --edge-produce: color-mix(in srgb, var(--rel-produce) 85%, var(--line-strong));
+  --edge-replace: color-mix(in srgb, var(--rel-replace) 85%, var(--line-strong));
+}
+.react-flow__edge.edge-g-support .react-flow__edge-path { stroke: var(--edge-support); }
+.react-flow__edge.edge-g-oppose .react-flow__edge-path { stroke: var(--edge-oppose); }
+.react-flow__edge.edge-g-derive .react-flow__edge-path { stroke: var(--edge-derive); }
+.react-flow__edge.edge-g-produce .react-flow__edge-path { stroke: var(--edge-produce); }
+.react-flow__edge.edge-g-replace .react-flow__edge-path { stroke: var(--edge-replace); }
+/* A focused edge keeps its family colour at full strength; unclassified links turn to ink. */
+.react-flow__edge.is-focused .react-flow__edge-path { stroke: var(--ink); }
+.react-flow__edge.is-focused.edge-g-support .react-flow__edge-path { stroke: var(--rel-support); }
+.react-flow__edge.is-focused.edge-g-oppose .react-flow__edge-path { stroke: var(--rel-oppose); }
+.react-flow__edge.is-focused.edge-g-derive .react-flow__edge-path { stroke: var(--rel-derive); }
+.react-flow__edge.is-focused.edge-g-produce .react-flow__edge-path { stroke: var(--rel-produce); }
+.react-flow__edge.is-focused.edge-g-replace .react-flow__edge-path { stroke: var(--rel-replace); }
+.react-flow__edge.is-muted .react-flow__edge-text,
+.react-flow__edge.is-muted .react-flow__edge-textbg { opacity: 0; }
+.react-flow__edge-text { fill: var(--ink-3); font-size: 10px; font-weight: 450; }
+.react-flow__edge-textbg { fill: var(--bg); }
+@keyframes edge-flow { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+@keyframes edge-flow-reverse { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 24; } }
+.react-flow__edge-flow {
+  stroke-width: 2.25;
+  stroke-dasharray: 4 20;
+  stroke-linecap: round;
+  opacity: 0.85;
+  vector-effect: non-scaling-stroke;
+  animation: edge-flow 1.3s linear infinite;
+}
+.react-flow__edge-flow.is-reversed { animation-name: edge-flow-reverse; }
+[data-layout-transition="true"] .react-flow__node:not(.dragging) {
+  transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-layout-transition="true"] .react-flow__edges {
+  transition: opacity 220ms ease-out;
+}
+.react-flow__node { cursor: pointer; }
+.react-flow__node-boardGroup { cursor: default; }
+.react-flow__minimap {
+  width: 140px !important;
+  height: 88px !important;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow-float);
+}
+.react-flow__panel { margin: 12px; }
+.react-flow__pane { cursor: default; }
+.react-flow__pane.dragging { cursor: grabbing; }
+
+/* View Transition API circular ink-reveal and style crossfade. */
+@keyframes theme-ripple {
+  from { clip-path: circle(0px at var(--vt-x, 50%) var(--vt-y, 50%)); }
+  to { clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 50%) var(--vt-y, 50%)); }
+}
+html[data-vt="ripple"]::view-transition-old(root),
+html[data-vt="ripple"]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-vt="ripple"]::view-transition-old(root) { z-index: 1; }
+html[data-vt="ripple"]::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-ripple 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+html[data-vt="fade"]::view-transition-old(root),
+html[data-vt="fade"]::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { transition-duration: 0s !important; animation-duration: 0s !important; animation-delay: 0s !important; }
+  .react-flow__edge-flow { display: none; }
+  .react-flow__node:hover .pinwhy-card,
+  .react-flow__node:active .pinwhy-card { transform: none !important; }
+  html::view-transition-group(*),
+  html::view-transition-old(*),
+  html::view-transition-new(*) { animation: none !important; }
+}
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+:root[data-motion="reduced"] .react-flow__edge-flow { display: none; }
+:root[data-motion="reduced"] .react-flow__node:hover .pinwhy-card,
+:root[data-motion="reduced"] .react-flow__node:active .pinwhy-card { transform: none !important; }
+html[data-motion="reduced"]::view-transition-group(*),
+html[data-motion="reduced"]::view-transition-old(*),
+html[data-motion="reduced"]::view-transition-new(*) { animation: none !important; }
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 45%, transparent); }
+  100% { box-shadow: 0 0 0 6px transparent; }
+}
+.live-dot { animation: pulse-ring 2s ease-out infinite; }
+
+/* Radix open/close motion for floating surfaces. */
+@keyframes surface-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes surface-out { from { opacity: 1; } to { opacity: 0; transform: scale(.98); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+@keyframes slide-in-left { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+@keyframes slide-up-bar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes node-swap { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes pill-in { from { opacity: 0; transform: translateY(-6px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes dossier-swap { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes disclosure-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.anim-surface[data-state="open"] { animation: surface-in .15s cubic-bezier(0.22, 1, 0.36, 1); }
+.anim-surface[data-state="closed"] { animation: surface-out .1s ease-in; }
+.anim-fade[data-state="open"] { animation: fade-in .15s ease-out; }
+.anim-fade[data-state="closed"] { animation: fade-out .1s ease-in; }
+.anim-slide-in { animation: slide-in-right .18s cubic-bezier(0.22, 1, 0.36, 1); }
+.anim-sidebar-in { animation: slide-in-left .18s cubic-bezier(0.22, 1, 0.36, 1); }
+.anim-timeline-in { animation: slide-up-bar .18s cubic-bezier(0.22, 1, 0.36, 1); }
+.anim-node-swap { animation: node-swap .16s cubic-bezier(0.22, 1, 0.36, 1); }
+.anim-pill-in { animation: pill-in .18s cubic-bezier(0.22, 1, 0.36, 1); }
+.anim-peek-in { animation: pill-in .15s cubic-bezier(0.22, 1, 0.36, 1); }
+.anim-dossier-swap { animation: dossier-swap .17s cubic-bezier(0.22, 1, 0.36, 1); }
+.anim-disclosure-in { animation: disclosure-in .14s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Nodes the Agent just wrote or changed. */
+@keyframes fresh-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c, var(--live)) 42%, transparent); border-color: var(--c, var(--live)); }
+  100% { box-shadow: 0 0 0 11px transparent; }
+}
+.fresh-pulse { animation: fresh-ring 1.4s ease-out 3; }
+
+/* Time machine: what the log changed between two checkpoints. Line style only, so no hue gains a second meaning. */
+.change-added { outline: 2px solid var(--ink); outline-offset: 3px; }
+.change-updated { outline: 2px dashed var(--ink-2); outline-offset: 3px; }
+
+/* Severity is independent of the node kind, status and confidence. */
+.severity-badge {
+  --severity: var(--ink-3);
+  color: var(--severity);
+  border-color: color-mix(in srgb, var(--severity) 28%, var(--line));
+  background: color-mix(in srgb, var(--severity) 10%, var(--surface));
+}
+.severity-badge[data-severity="critical"] { --severity: var(--severity-critical); }
+.severity-badge[data-severity="high"] { --severity: var(--severity-high); }
+.severity-badge[data-severity="medium"] { --severity: var(--severity-medium); }
+.severity-badge[data-severity="low"] { --severity: var(--severity-low); }
+
+/* The current node must be findable at a glance, at any zoom. */
+@keyframes current-breathe {
+  0%, 100% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 16%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--live) 8%, transparent); }
+}
+.current-halo {
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--live) 16%, transparent);
+  animation: current-breathe 3.4s ease-in-out infinite;
+}
+
+/* Badges that stay about the same size on screen while the board is zoomed out (--zoom is set on the canvas). */
+.zoom-chip {
+  position: absolute;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.35;
+  /* Sits on the card's top edge, mostly in the gap above it, so it does not cover the title. */
+  transform: translateY(-76%) scale(clamp(1, calc(0.95 / var(--zoom, 1)), 2.2));
+  box-shadow: var(--shadow-xs);
+}
+.zoom-chip.at-right { right: 8px; transform-origin: right center; }
+.zoom-chip.at-left { left: 8px; transform-origin: left center; }
+
+/* ---- Host embedding --------------------------------------------------- */
+/* Tailwind inlines its font stacks, so a host preference wins by specificity, not by being later. */
+html[data-embed-code-font] :is(.font-mono, code, pre) { font-family: var(--pinwhy-code-font); }
+html[data-embed-code-size] :is(.font-mono, code, pre) { font-size: var(--pinwhy-code-size); }

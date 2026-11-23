@@ -1,0 +1,19 @@
+{
+  "command": "tail",
+  "cases": [
+    {
+      "board": "research",
+      "args": [
+        "tail",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.tail.v1",
+        "tail": "<human-text>"
+      }
+    }
+  ]
+}

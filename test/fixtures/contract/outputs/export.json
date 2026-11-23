@@ -1,0 +1,106 @@
+{
+  "command": "export",
+  "cases": [
+    {
+      "board": "research",
+      "args": [
+        "export",
+        "--out",
+        "<root>/out.html",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.export.v1",
+        "file": "<root>/out.html",
+        "format": "html"
+      }
+    },
+    {
+      "board": "research",
+      "args": [
+        "export",
+        "--format",
+        "markdown",
+        "--type",
+        "vuln",
+        "--group-by",
+        "status",
+        "--out",
+        "<root>/out.md",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.export.v1",
+        "file": "<root>/out.md",
+        "format": "markdown"
+      }
+    },
+    {
+      "board": "research",
+      "args": [
+        "export",
+        "--format",
+        "mermaid",
+        "--max-nodes",
+        "3",
+        "--out",
+        "<root>/out.mmd",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.export.v1",
+        "file": "<root>/out.mmd",
+        "format": "mermaid"
+      }
+    },
+    {
+      "board": "research",
+      "args": [
+        "export",
+        "--format",
+        "sarif",
+        "--out",
+        "<root>/out.sarif",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.export.v1",
+        "file": "<root>/out.sarif",
+        "format": "sarif"
+      }
+    },
+    {
+      "board": "research",
+      "args": [
+        "export",
+        "--format",
+        "markdown",
+        "--as-of",
+        "cp1",
+        "--out",
+        "<root>/out-cp1.md",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.export.v1",
+        "file": "<root>/out-cp1.md",
+        "format": "markdown"
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "command": "digest",
+  "cases": [
+    {
+      "board": "research",
+      "args": [
+        "digest",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.digest.v1",
+        "digest": "<human-text>"
+      }
+    },
+    {
+      "board": "research",
+      "args": [
+        "digest",
+        "--agent",
+        "agent:reviewer",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.digest.v1",
+        "digest": "<human-text>"
+      }
+    },
+    {
+      "board": "research",
+      "args": [
+        "digest",
+        "--write",
+        "--cwd",
+        "<board>",
+        "--json"
+      ],
+      "exitCode": 0,
+      "output": {
+        "schema": "pinwhy.digest.v1",
+        "digest": "<human-text>"
+      }
+    }
+  ]
+}

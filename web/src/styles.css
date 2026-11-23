@@ -1,0 +1,8 @@
+@import "tailwindcss" source("./");
+@import "@xyflow/react/dist/style.css" layer(base);
+@import "./styles/tokens.css";
+@import "./styles/components.css";
+@import "./styles/canvas.css";
+@import "./styles/ultra.css";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

@@ -1,0 +1,488 @@
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--ink);
+  --color-primary-foreground: var(--bg);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--ink-3);
+  --color-subtle: var(--ink-2);
+  --color-accent: var(--surface-2);
+  --color-accent-foreground: var(--ink);
+  --color-border: var(--line);
+  --color-strong: var(--line-strong);
+  --color-input: var(--line-strong);
+  --color-ring: var(--ink);
+  --color-destructive: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-live: var(--live);
+
+  --color-node-goal: var(--node-goal);
+  --color-node-intent: var(--node-intent);
+  --color-node-hypothesis: var(--node-hypothesis);
+  --color-node-question: var(--node-question);
+  --color-node-fact: var(--node-fact);
+  --color-node-observation: var(--node-observation);
+  --color-node-action: var(--node-action);
+  --color-node-result: var(--node-result);
+  --color-node-finding: var(--node-finding);
+  --color-node-vuln: var(--node-vuln);
+  --color-node-hint: var(--node-hint);
+  --color-node-summary: var(--node-summary);
+  --color-node-note: var(--node-note);
+  --color-node-start: var(--node-start);
+
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-float: 0 0 0 1px var(--line), 0 8px 24px -4px rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.06);
+  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.05), 0 1px 1px -1px rgb(15 23 42 / 0.04);
+  --shadow-card-hover: 0 8px 20px -6px rgb(15 23 42 / 0.12), 0 2px 6px -2px rgb(15 23 42 / 0.06);
+}
+
+/* Pinwhy — neutral surfaces, one monochrome accent, colour only where it carries meaning. */
+:root {
+  color-scheme: light;
+  --bg: #f2f4f7;
+  --surface: #ffffff;
+  --surface-2: #f3f4f6;
+  --surface-3: #e5e7eb;
+  --ink: #111827;
+  --ink-2: #4b5563;
+  --ink-3: #6b7280;
+  --line: #e5e7eb;
+  --line-strong: #cbd5e1;
+  --live: #15803d;
+  --danger: #be123c;
+  --severity-critical: #be123c;
+  --severity-high: #c2410c;
+  --severity-medium: #b45309;
+  --severity-low: #1d4ed8;
+  --rel-support: #15803d;
+  --rel-oppose: #e11d48;
+  --rel-derive: #4f46e5;
+  --rel-produce: #b45309;
+  --rel-replace: #64748b;
+  --danger-soft: #fff1f2;
+
+  --node-start: #0f766e;
+  --node-goal: #4338ca;
+  --node-intent: #4f46e5;
+  --node-hypothesis: #c2410c;
+  --node-question: #b45309;
+  --node-fact: #0e7490;
+  --node-observation: #0f766e;
+  --node-action: #475569;
+  --node-result: #4338ca;
+  --node-finding: #be123c;
+  --node-vuln: #be123c;
+  --node-hint: #9a3412;
+  --node-summary: #64748b;
+  --node-note: #64748b;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0c10;
+  --surface: #14161d;
+  --surface-2: #1d202a;
+  --surface-3: #282c3a;
+  --ink: #f3f4f6;
+  --ink-2: #a1a7b3;
+  --ink-3: #7d8594;
+  --line: #252936;
+  --line-strong: #383e52;
+  --live: #34d399;
+  --danger: #fb7185;
+  --severity-critical: #fb7185;
+  --severity-high: #fb923c;
+  --severity-medium: #fbbf24;
+  --severity-low: #60a5fa;
+  --rel-support: #34d399;
+  --rel-oppose: #fb7185;
+  --rel-derive: #818cf8;
+  --rel-produce: #fbbf24;
+  --rel-replace: #94a3b8;
+  --danger-soft: #2a1319;
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.35), 0 1px 0 0 rgb(255 255 255 / 0.03) inset;
+  --shadow-card-hover: 0 10px 26px -6px rgb(0 0 0 / 0.55), 0 2px 8px -2px rgb(0 0 0 / 0.4), 0 1px 0 0 rgb(255 255 255 / 0.06) inset;
+
+  --node-start: #2dd4bf;
+  --node-goal: #818cf8;
+  --node-intent: #a5b4fc;
+  --node-hypothesis: #fb923c;
+  --node-question: #fbbf24;
+  --node-fact: #38bdf8;
+  --node-observation: #2dd4bf;
+  --node-action: #94a3b8;
+  --node-result: #a78bfa;
+  --node-finding: #fb7185;
+  --node-vuln: #fb7185;
+  --node-hint: #fdba74;
+  --node-summary: #94a3b8;
+  --node-note: #64748b;
+}
+
+:root[data-card-theme="emerald"] {
+  --bg: #f1f5f2;
+  --surface: #fbfdfb;
+  --surface-2: #e7efe9;
+  --surface-3: #d5e2d9;
+  --ink: #13201b;
+  --ink-2: #3d5249;
+  --ink-3: #60786e;
+  --line: #dce6df;
+  --line-strong: #bccdc2;
+  --live: #147453;
+  --danger: #be123c;
+  --severity-critical: #be123c;
+  --severity-high: #c2410c;
+  --severity-medium: #b45309;
+  --severity-low: #0369a1;
+  --rel-support: #147453;
+  --rel-oppose: #e11d48;
+  --rel-derive: #4f46e5;
+  --rel-produce: #b45309;
+  --rel-replace: #60786e;
+  --danger-soft: #fff1f2;
+
+  --node-start: #147453;
+  --node-goal: #0f766e;
+  --node-intent: #4338ca;
+  --node-hypothesis: #b45309;
+  --node-question: #a16207;
+  --node-fact: #0369a1;
+  --node-observation: #15803d;
+  --node-action: #475569;
+  --node-result: #4f46e5;
+  --node-finding: #be123c;
+  --node-vuln: #be123c;
+  --node-hint: #9a3412;
+  --node-summary: #60786e;
+  --node-note: #60786e;
+}
+
+:root[data-theme="dark"][data-card-theme="emerald"] {
+  --bg: #090d0c;
+  --surface: #101715;
+  --surface-2: #17221f;
+  --surface-3: #22322d;
+  --ink: #eef5f1;
+  --ink-2: #9cb2a8;
+  --ink-3: #6e877d;
+  --line: #1e2c27;
+  --line-strong: #2f453e;
+  --live: #66e0ae;
+  --danger: #fb7185;
+  --severity-critical: #fb7185;
+  --severity-high: #fb923c;
+  --severity-medium: #fbbf24;
+  --severity-low: #38bdf8;
+  --rel-support: #66e0ae;
+  --rel-oppose: #fb7185;
+  --rel-derive: #818cf8;
+  --rel-produce: #fbbf24;
+  --rel-replace: #7f978e;
+  --danger-soft: #2a1319;
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.42), 0 1px 0 0 rgb(102 224 174 / 0.04) inset;
+  --shadow-card-hover: 0 10px 26px -6px rgb(0 0 0 / 0.65), 0 2px 8px -2px rgb(0 0 0 / 0.45), 0 1px 0 0 rgb(102 224 174 / 0.08) inset;
+
+  --node-start: #66e0ae;
+  --node-goal: #5eead4;
+  --node-intent: #818cf8;
+  --node-hypothesis: #fbbf24;
+  --node-question: #facc15;
+  --node-fact: #38bdf8;
+  --node-observation: #34d399;
+  --node-action: #9cb2a8;
+  --node-result: #a78bfa;
+  --node-finding: #fb7185;
+  --node-vuln: #fb7185;
+  --node-hint: #fdba74;
+  --node-summary: #94a3b8;
+  --node-note: #6e877d;
+}
+
+:root[data-card-theme="aura"] {
+  --bg: #f4f5f8;
+  --surface: #ffffff;
+  --surface-2: #f4f5f7;
+  --surface-3: #e2e8f0;
+  --ink: #0f172a;
+  --ink-2: #475569;
+  --ink-3: #64748b;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --live: #059669;
+  --danger: #dc2626;
+  --rel-support: #059669;
+  --rel-oppose: #dc2626;
+  --rel-derive: #4f46e5;
+  --rel-produce: #0284c7;
+  --rel-replace: #64748b;
+  --node-start: #059669;
+  --node-goal: #2563eb;
+  --node-intent: #4f46e5;
+  --node-hypothesis: #ea580c;
+  --node-question: #c2410c;
+  --node-fact: #0284c7;
+  --node-observation: #0d9488;
+  --node-action: #64748b;
+  --node-result: #4f46e5;
+  --node-finding: #dc2626;
+  --node-vuln: #dc2626;
+  --node-hint: #d97706;
+  --node-summary: #64748b;
+  --node-note: #94a3b8;
+}
+
+:root[data-theme="dark"][data-card-theme="aura"] {
+  --bg: #0a0b0f;
+  --surface: #12141c;
+  --surface-2: #1a1d28;
+  --surface-3: #262a3a;
+  --ink: #f8fafc;
+  --ink-2: #94a3b8;
+  --ink-3: #7c8ba1;
+  --line: #222635;
+  --line-strong: #333a4d;
+  --live: #34d399;
+  --danger: #f87171;
+  --rel-support: #34d399;
+  --rel-oppose: #f87171;
+  --rel-derive: #818cf8;
+  --rel-produce: #38bdf8;
+  --rel-replace: #94a3b8;
+  --node-start: #34d399;
+  --node-goal: #60a5fa;
+  --node-intent: #818cf8;
+  --node-hypothesis: #fb923c;
+  --node-question: #fbbf24;
+  --node-fact: #38bdf8;
+  --node-observation: #2dd4bf;
+  --node-action: #94a3b8;
+  --node-result: #a78bfa;
+  --node-finding: #f87171;
+  --node-vuln: #f87171;
+  --node-hint: #f59e0b;
+  --node-summary: #94a3b8;
+  --node-note: #64748b;
+}
+
+:root[data-card-theme="mono"] {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-3: #e4e4e7;
+  --ink: #09090b;
+  --ink-2: #52525b;
+  --ink-3: #71717a;
+  --line: #e4e4e7;
+  --line-strong: #a1a1aa;
+  --live: #16a34a;
+  --danger: #b91c1c;
+  --node-start: #18181b;
+  --node-goal: #18181b;
+  --node-intent: #27272a;
+  --node-hypothesis: #3f3f46;
+  --node-question: #3f3f46;
+  --node-fact: #52525b;
+  --node-observation: #52525b;
+  --node-action: #71717a;
+  --node-result: #27272a;
+  --node-finding: #991b1b;
+  --node-vuln: #991b1b;
+  --node-hint: #52525b;
+  --node-summary: #71717a;
+  --node-note: #a1a1aa;
+}
+
+:root[data-theme="dark"][data-card-theme="mono"] {
+  --bg: #09090b;
+  --surface: #111113;
+  --surface-2: #18181b;
+  --surface-3: #27272a;
+  --ink: #fafafa;
+  --ink-2: #a1a1aa;
+  --ink-3: #71717a;
+  --line: #27272a;
+  --line-strong: #52525b;
+  --live: #4ade80;
+  --danger: #f87171;
+  --node-start: #f4f4f5;
+  --node-goal: #f4f4f5;
+  --node-intent: #e4e4e7;
+  --node-hypothesis: #d4d4d8;
+  --node-question: #d4d4d8;
+  --node-fact: #a1a1aa;
+  --node-observation: #a1a1aa;
+  --node-action: #71717a;
+  --node-result: #e4e4e7;
+  --node-finding: #f87171;
+  --node-vuln: #f87171;
+  --node-hint: #a1a1aa;
+  --node-summary: #71717a;
+  --node-note: #52525b;
+}
+
+:root[data-card-theme="morandi"] {
+  --bg: #f5f2ec;
+  --surface: #fdfcf9;
+  --surface-2: #efeae0;
+  --surface-3: #e4ddd1;
+  --ink: #26231e;
+  --ink-2: #5c564d;
+  --ink-3: #7a7368;
+  --line: #e4ddd1;
+  --line-strong: #cbc2b3;
+  --live: #2f7a5b;
+  --danger: #b54434;
+  --severity-critical: #b54434;
+  --severity-high: #b85d2e;
+  --severity-medium: #a16b35;
+  --severity-low: #46677d;
+  --rel-support: #2f7a5b;
+  --rel-oppose: #b54434;
+  --rel-derive: #5b6799;
+  --rel-produce: #8a6d46;
+  --rel-replace: #787166;
+  --danger-soft: #f9ebe8;
+
+  --node-start: #2f7a5b;
+  --node-goal: #46677d;
+  --node-intent: #5b6799;
+  --node-hypothesis: #a16b35;
+  --node-question: #9c7432;
+  --node-fact: #3d7468;
+  --node-observation: #487d72;
+  --node-action: #787166;
+  --node-result: #6d618f;
+  --node-finding: #b54434;
+  --node-vuln: #b54434;
+  --node-hint: #9e5d52;
+  --node-summary: #787166;
+  --node-note: #9a9286;
+}
+
+:root[data-theme="dark"][data-card-theme="morandi"] {
+  --bg: #12110f;
+  --surface: #1b1916;
+  --surface-2: #24211c;
+  --surface-3: #302c25;
+  --ink: #f2ede4;
+  --ink-2: #b3aba0;
+  --ink-3: #8e867b;
+  --line: #2d2a24;
+  --line-strong: #443f37;
+  --live: #58b38a;
+  --danger: #df7463;
+  --severity-critical: #df7463;
+  --severity-high: #e09162;
+  --severity-medium: #cfa06b;
+  --severity-low: #7ea2ba;
+  --rel-support: #58b38a;
+  --rel-oppose: #df7463;
+  --rel-derive: #8e9bd1;
+  --rel-produce: #bfa074;
+  --rel-replace: #9b9386;
+  --danger-soft: #2e1b18;
+
+  --node-start: #58b38a;
+  --node-goal: #7ea2ba;
+  --node-intent: #8e9bd1;
+  --node-hypothesis: #cfa06b;
+  --node-question: #ccb06a;
+  --node-fact: #6cb0a0;
+  --node-observation: #79bcae;
+  --node-action: #9b9386;
+  --node-result: #a799cc;
+  --node-finding: #df7463;
+  --node-vuln: #df7463;
+  --node-hint: #c98d82;
+  --node-summary: #9b9386;
+  --node-note: #7c7469;
+}
+
+:root[data-card-theme="classic"] {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-3: #e4e4e7;
+  --ink: #09090b;
+  --ink-2: #52525b;
+  --ink-3: #6b6b76;
+  --line: #e8e8ec;
+  --line-strong: #d4d4d8;
+  --live: #16a34a;
+  --danger: #b91c1c;
+  --severity-critical: #b91c1c;
+  --severity-high: #c2410c;
+  --severity-medium: #a16207;
+  --severity-low: #1d4ed8;
+  --rel-support: #16a34a;
+  --rel-oppose: #dc2626;
+  --rel-derive: #6366f1;
+  --rel-produce: #d97706;
+  --rel-replace: #71717a;
+  --danger-soft: #fef2f2;
+
+  --node-start: #16a34a;
+  --node-goal: #2563eb;
+  --node-intent: #6366f1;
+  --node-hypothesis: #d97706;
+  --node-question: #ca8a04;
+  --node-fact: #0891b2;
+  --node-observation: #0d9488;
+  --node-action: #64748b;
+  --node-result: #7c3aed;
+  --node-finding: #dc2626;
+  --node-vuln: #dc2626;
+  --node-hint: #db2777;
+  --node-summary: #64748b;
+  --node-note: #a1a1aa;
+}
+
+:root[data-theme="dark"][data-card-theme="classic"] {
+  --bg: #09090b;
+  --surface: #111113;
+  --surface-2: #1a1a1d;
+  --surface-3: #27272a;
+  --ink: #fafafa;
+  --ink-2: #a1a1aa;
+  --ink-3: #8b8b95;
+  --line: #232326;
+  --line-strong: #3a3a40;
+  --live: #4ade80;
+  --danger: #f87171;
+  --severity-critical: #f87171;
+  --severity-high: #fb923c;
+  --severity-medium: #facc15;
+  --severity-low: #60a5fa;
+  --rel-support: #4ade80;
+  --rel-oppose: #f87171;
+  --rel-derive: #818cf8;
+  --rel-produce: #fbbf24;
+  --rel-replace: #a1a1aa;
+  --danger-soft: #2a1515;
+
+  --node-start: #4ade80;
+  --node-goal: #60a5fa;
+  --node-intent: #818cf8;
+  --node-hypothesis: #fbbf24;
+  --node-question: #facc15;
+  --node-fact: #22d3ee;
+  --node-observation: #2dd4bf;
+  --node-action: #94a3b8;
+  --node-result: #a78bfa;
+  --node-finding: #f87171;
+  --node-vuln: #f87171;
+  --node-hint: #f472b6;
+  --node-summary: #94a3b8;
+  --node-note: #71717a;
+}

@@ -1,0 +1,293 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { addNode, appendEvent, ensure, paths, readEvents, replay, withLock, writeBatch } from '../../lib/store.js';
+
+function fixture(t) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinwhy-store-io-'));
+  ensure(dir);
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
+
+function replace(t, method, implementation) {
+  const original = fs[method];
+  fs[method] = implementation(original);
+  const restore = () => { fs[method] = original; };
+  t.after(restore);
+  return restore;
+}
+
+function observeOpen(t, file, flags) {
+  let descriptor;
+  replace(t, 'openSync', (original) => function(target, mode, ...args) {
+    const fd = original.call(this, target, mode, ...args);
+    if ((typeof file === 'function' ? file(target) : target === file) && mode === flags) descriptor = fd;
+    return fd;
+  });
+  t.after(() => {
+    if (descriptor !== undefined) {
+      try { fs.closeSync(descriptor); } catch {}
+    }
+  });
+  return () => descriptor;
+}
+
+function observeLockToken(t, lock) {
+  return observeOpen(t, (file) => typeof file === 'string'
+    && path.dirname(file).startsWith(`${lock}.`) && path.basename(file).startsWith('owner-'), 'wx');
+}
+
+for (const failingMethod of ['fstatSync', 'readSync']) {
+  test(`readEvents closes its descriptor when ${failingMethod} fails`, (t) => {
+    const dir = fixture(t);
+    addNode({ title: 'Synthetic event' }, dir);
+    const opened = observeOpen(t, paths(dir).events, 'r');
+    const stat = fs.fstatSync;
+    const restore = replace(t, failingMethod, (original) => function(fd, ...args) {
+      if (fd === opened()) throw Object.assign(new Error('synthetic read failure'), { code: 'EIO' });
+      return original.call(this, fd, ...args);
+    });
+    try {
+      assert.throws(() => readEvents(dir), { code: 'EIO' });
+      assert.notEqual(opened(), undefined);
+      assert.throws(() => stat(opened()), { code: 'EBADF' });
+    } finally {
+      restore();
+    }
+    assert.equal(Object.values(replay(dir).nodes)[0].title, 'Synthetic event');
+  });
+}
+
+test('short event reads preserve complete UTF-8 events, integrity counts and byte cursors', (t) => {
+  const dir = fixture(t);
+  addNode({ title: 'Synthetic 中文 event' }, dir);
+  addNode({ title: 'Second synthetic event' }, dir);
+  fs.appendFileSync(paths(dir).events, 'invalid JSON\n');
+  appendEvent({ op: 'node', eventVersion: 2, node: { id: 'n3', title: 'Future event', type: 'note' } }, dir);
+  fs.appendFileSync(paths(dir).events, '{"unfinished":');
+  const bytes = fs.readFileSync(paths(dir).events);
+  const fromByte = bytes.indexOf(0x0a) + 1;
+  const expected = readEvents(dir);
+  const expectedTail = readEvents(dir, fromByte);
+  const opened = observeOpen(t, paths(dir).events, 'r');
+  replace(t, 'readSync', (original) => function(fd, buffer, offset, length, position) {
+    return original.call(this, fd, buffer, offset, fd === opened() ? Math.min(5, length) : length, position);
+  });
+  const log = readEvents(dir);
+  assert.deepEqual(log, expected);
+  assert.deepEqual(log.events.map((event) => event.node.title), ['Synthetic 中文 event', 'Second synthetic event']);
+  assert.equal(log.corrupt, 1);
+  assert.equal(log.future, 1);
+  assert.equal(log.offset, bytes.lastIndexOf(0x0a) + 1);
+  assert.deepEqual(readEvents(dir, fromByte), expectedTail);
+  assert.deepEqual(Object.values(replay(dir).nodes).map((node) => node.title), [
+    'Synthetic 中文 event', 'Second synthetic event',
+  ]);
+});
+
+test('event reads stop at EOF if the observed file size exceeds the available bytes', (t) => {
+  const dir = fixture(t);
+  addNode({ title: 'Available event' }, dir);
+  const expected = readEvents(dir);
+  const opened = observeOpen(t, paths(dir).events, 'r');
+  replace(t, 'fstatSync', (original) => function(fd, ...args) {
+    const stat = original.call(this, fd, ...args);
+    if (fd === opened()) stat.size += 20;
+    return stat;
+  });
+  assert.deepEqual(readEvents(dir), expected);
+});
+
+for (const partial of [false, true]) {
+  test(`a failed ${partial ? 'partial ' : ''}lock-token write closes and releases its own acquisition`, (t) => {
+    const dir = fixture(t);
+    const lock = paths(dir).lock;
+    const opened = observeLockToken(t, lock);
+    const restore = replace(t, 'writeFileSync', (original) => function(file, content, ...args) {
+      if (file === opened()) {
+        if (partial) original.call(this, file, content.slice(0, 4), ...args);
+        throw Object.assign(new Error('synthetic token write failure'), { code: 'ENOSPC' });
+      }
+      return original.call(this, file, content, ...args);
+    });
+    try {
+      assert.throws(() => addNode({ title: 'Failed acquisition' }, dir), { code: 'ENOSPC' });
+      assert.notEqual(opened(), undefined);
+      assert.throws(() => fs.fstatSync(opened()), { code: 'EBADF' });
+      assert.equal(fs.existsSync(lock), false);
+      assert.equal(fs.readdirSync(path.dirname(lock)).some((name) => name.startsWith(`${path.basename(lock)}.`)), false);
+      assert.equal(readEvents(dir).events.length, 0);
+    } finally {
+      restore();
+    }
+    const { node } = addNode({ title: 'Next write succeeds' }, dir);
+    assert.equal(replay(dir).nodes[node.id].title, 'Next write succeeds');
+    assert.equal(fs.existsSync(lock), false);
+  });
+}
+
+for (const legacy of [false, true]) {
+  test(`a failed token write preserves another owner's ${legacy ? 'legacy file' : 'published directory'}`, (t) => {
+    const dir = fixture(t);
+    const lock = paths(dir).lock;
+    const opened = observeLockToken(t, lock);
+    const otherToken = `${process.pid}\n1\nother-owner\n`;
+    const otherOwner = path.join(lock, `owner-${'b'.repeat(32)}`);
+    const restore = replace(t, 'writeFileSync', (original) => function(file, content, ...args) {
+      if (file === opened()) {
+        if (!legacy) fs.mkdirSync(lock);
+        original.call(this, legacy ? lock : otherOwner, otherToken);
+        throw Object.assign(new Error('synthetic token write failure'), { code: 'ENOSPC' });
+      }
+      return original.call(this, file, content, ...args);
+    });
+    try {
+      assert.throws(() => addNode({ title: 'Failed acquisition' }, dir), { code: 'ENOSPC' });
+      assert.throws(() => fs.fstatSync(opened()), { code: 'EBADF' });
+      assert.equal(fs.readFileSync(legacy ? lock : otherOwner, 'utf8'), otherToken);
+      assert.equal(fs.readdirSync(path.dirname(lock)).some((name) => name.startsWith(`${path.basename(lock)}.`)), false);
+    } finally {
+      restore();
+    }
+    assert.throws(() => withLock(() => assert.fail('live owner must keep its lock'), dir, 1), /lock timeout/);
+    assert.equal(fs.readFileSync(legacy ? lock : otherOwner, 'utf8'), otherToken);
+  });
+}
+
+test('writable locks validate the acquired log and read-only locks remain available for newer events', (t) => {
+  const dir = fixture(t);
+  const lock = paths(dir).lock;
+  const opened = observeLockToken(t, lock);
+  let appended = false;
+  const restore = replace(t, 'writeFileSync', (original) => function(file, content, ...args) {
+    const result = original.call(this, file, content, ...args);
+    if (file === opened() && !appended) {
+      appended = true;
+      appendEvent({ op: 'node', eventVersion: 2, node: { id: 'n1', type: 'note', title: 'Newer event' } }, dir);
+    }
+    return result;
+  });
+  try {
+    assert.throws(() => withLock(() => assert.fail('future events must block writing'), dir), /eventVersion > 1/);
+    assert.equal(fs.existsSync(lock), false);
+  } finally {
+    restore();
+  }
+  assert.equal(withLock((log) => {
+    assert.equal(log, undefined);
+    assert.equal(fs.existsSync(lock), true);
+    return 'read-only snapshot';
+  }, dir, null, { readOnly: true }), 'read-only snapshot');
+  assert.equal(readEvents(dir).future, 1);
+  assert.equal(fs.existsSync(lock), false);
+});
+
+test('writable lock callbacks receive the current log while holding the lock', (t) => {
+  const dir = fixture(t);
+  const { node } = addNode({ title: 'Current event' }, dir);
+  const result = withLock((log) => {
+    assert.equal(fs.existsSync(paths(dir).lock), true);
+    assert.equal(log.events[0].node.id, node.id);
+    assert.equal(log.future, 0);
+    return node.id;
+  }, dir);
+  assert.equal(result, node.id);
+  assert.equal(fs.existsSync(paths(dir).lock), false);
+});
+
+test('event reads preserve empty, exhausted, incomplete and missing-file cursor results', (t) => {
+  const dir = fixture(t);
+  const empty = (offset, truncated = false, incompleteTailBytes = 0) => ({
+    events: [], corrupt: 0, future: 0, corruptAt: [], futureAt: [], invalidRecords: 0, invalidAt: [],
+    incompleteTailBytes, invalidUtf8: false, invalidUtf8At: [], offset, truncated,
+  });
+  assert.deepEqual(readEvents(dir), empty(0));
+  addNode({ title: 'Complete event' }, dir);
+  const size = fs.statSync(paths(dir).events).size;
+  assert.deepEqual(readEvents(dir, size), empty(size));
+  assert.deepEqual(readEvents(dir, size + 10), empty(size));
+  fs.appendFileSync(paths(dir).events, '{"incomplete":');
+  assert.deepEqual(readEvents(dir, size), empty(size, true, Buffer.byteLength('{"incomplete":')));
+  fs.unlinkSync(paths(dir).events);
+  assert.deepEqual(readEvents(dir, size), empty(size));
+});
+
+test('an interrupted large batch preserves earlier records when repair reads are short', (t) => {
+  const dir = fixture(t);
+  const { node: retained } = addNode({ title: 'Already committed 中文 evidence' }, dir);
+  const file = paths(dir).events;
+  const prefix = fs.readFileSync(file);
+  const records = Array.from({ length: 400 }, (_, index) => ({
+    line: index + 1, op: 'node', type: 'note', title: `Synthetic batch ${index}`, detail: 'x'.repeat(4000),
+  }));
+  writeBatch(records, { requestId: 'interrupted-large-batch' }, dir);
+  const complete = fs.readFileSync(file);
+  const firstLineEnd = complete.indexOf(0x0a, prefix.length);
+  assert.ok(firstLineEnd - prefix.length > 1024 * 1024, 'the legal request plan exceeds the old scan window');
+  fs.writeFileSync(file, complete.subarray(0, firstLineEnd - 17));
+  fs.unlinkSync(paths(dir).state);
+  const opened = observeOpen(t, file, 'r+');
+  replace(t, 'readSync', (original) => function(fd, buffer, offset, length, position) {
+    return original.call(this, fd, buffer, offset, fd === opened() ? Math.min(4096, length) : length, position);
+  });
+  const { node: next } = addNode({ title: 'Committed after interruption' }, dir);
+  const graph = replay(dir);
+  assert.deepEqual(fs.readFileSync(file).subarray(0, prefix.length), prefix);
+  assert.equal(graph.nodes[retained.id].title, 'Already committed 中文 evidence');
+  assert.equal(graph.nodes[next.id].title, 'Committed after interruption');
+  assert.deepEqual(Object.keys(graph.nodes), [retained.id, next.id]);
+  assert.equal(graph.integrity.corruptLines, 0);
+});
+
+test('a log read failure rejects a mutation without changing committed events', (t) => {
+  const dir = fixture(t);
+  const { node } = addNode({ title: 'Committed before read failure' }, dir);
+  const file = paths(dir).events;
+  const before = fs.readFileSync(file);
+  const opened = observeOpen(t, file, 'r');
+  const restore = replace(t, 'readSync', (original) => function(fd, ...args) {
+    if (fd === opened()) throw Object.assign(new Error('synthetic source failure'), { code: 'EIO' });
+    return original.call(this, fd, ...args);
+  });
+  try {
+    assert.throws(() => addNode({ title: 'Must not be committed' }, dir), { code: 'EIO' });
+  } finally {
+    restore();
+  }
+  assert.deepEqual(fs.readFileSync(file), before);
+  assert.equal(fs.existsSync(paths(dir).lock), false);
+  assert.equal(replay(dir).nodes[node.id].title, 'Committed before read failure');
+});
+
+for (const failure of ['error', 'eof']) {
+  test(`tail repair preserves the entire file on ${failure} during scanning`, (t) => {
+    const dir = fixture(t);
+    addNode({ title: 'Committed prefix' }, dir);
+    const file = paths(dir).events;
+    fs.appendFileSync(file, '{"unfinished":"' + 'x'.repeat(128 * 1024));
+    const before = fs.readFileSync(file);
+    const opened = observeOpen(t, file, 'r+');
+    const restore = replace(t, 'readSync', (original) => function(fd, buffer, offset, length, position) {
+      if (fd === opened() && length > 1) {
+        if (failure === 'eof') return 0;
+        throw Object.assign(new Error('synthetic scan failure'), { code: 'EIO' });
+      }
+      return original.call(this, fd, buffer, offset, length, position);
+    });
+    try {
+      assert.throws(() => addNode({ title: 'Must wait for repair' }, dir), { code: 'EIO' });
+      // The closed repair descriptor may be reused by the verification read.
+      restore();
+      assert.deepEqual(fs.readFileSync(file), before);
+      assert.equal(fs.existsSync(paths(dir).lock), false);
+    } finally {
+      restore();
+    }
+    const { node } = addNode({ title: 'Repair can be retried' }, dir);
+    assert.equal(replay(dir).nodes[node.id].title, 'Repair can be retried');
+    assert.deepEqual(fs.readFileSync(file).subarray(0, before.indexOf(0x0a) + 1), before.subarray(0, before.indexOf(0x0a) + 1));
+  });
+}

@@ -1,0 +1,27 @@
+{
+  "name": "pinwhy-core",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Event-sourced external memory SDK for AI agents: explicit nodes, evidence relations, replay and recoverable context.",
+  "type": "module",
+  "main": "./lib/core.js",
+  "exports": {
+    ".": "./lib/core.js",
+    "./model": "./lib/domain/model.js",
+    "./store": "./lib/store.js",
+    "./context": "./lib/queries/context.js",
+    "./search": "./lib/queries/search.js",
+    "./history": "./lib/queries/history.js",
+    "./backup": "./lib/storage/backup.js",
+    "./contracts": "./lib/domain/contracts.js",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib/", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "license": "MIT",
+  "homepage": "https://github.com/Fruit-Guardians/pinwhy#readme",
+  "repository": { "type": "git", "url": "git+https://github.com/Fruit-Guardians/pinwhy.git", "directory": "packages/pinwhy-core" },
+  "bugs": { "url": "https://github.com/Fruit-Guardians/pinwhy/issues" },
+  "keywords": ["pinwhy", "agent-memory", "event-sourcing", "sdk", "local-first"],
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" }
+}

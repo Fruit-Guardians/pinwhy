@@ -1,0 +1,174 @@
+name: Verify release package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build once, test and pack (Node 24)
+    runs-on: ubuntu-latest
+    outputs:
+      tarball: ${{ steps.pack.outputs.tarball }}
+    steps:
+      - uses: actions/checkout@v4
+      # Vite 8 requires ^20.19 or >=22.12. Node 18 is a runtime target, not a build host.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Check publication hygiene (source only; no model or real-task data)
+        run: npm run check:publish
+      - run: npm ci
+      - run: npm run check:types
+      - run: npm run check:arch
+      - run: npm run lint
+      - run: npm run check:docs
+      - run: npm test
+      - run: npm run build
+      - name: Verify committed public/ matches fresh build
+        run: test -z "$(git status --porcelain public/)"
+      - name: Install Chromium for viewer and export consumer checks
+        run: npx playwright install --with-deps chromium
+      - name: Verify real viewer interactions and 3D fallbacks in Chromium
+        id: viewer
+        timeout-minutes: 6
+        # The verifier explicitly uses ANGLE SwiftShader for normal 3D rendering.
+        run: npm run verify:viewer
+        env:
+          PINWHY_VIEWER_OUTPUT: dist/viewer-verification
+      - name: Preserve viewer screenshots and results, including failures
+        if: always() && steps.viewer.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinwhy-viewer-verification
+          path: dist/viewer-verification/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Verify real audit workspace interactions, deep links and write recovery in Chromium
+        id: audit
+        timeout-minutes: 6
+        run: npm run verify:audit
+        env:
+          PINWHY_AUDIT_OUTPUT: dist/audit-verification
+      - name: Preserve audit screenshots and results, including failures
+        if: always() && steps.audit.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinwhy-audit-verification
+          path: dist/audit-verification/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Render Markdown and Mermaid in Chromium
+        run: npm run verify:exports:text -- --out-dir dist/export-consumers
+      - name: Validate actual CLI SARIF exports against the official schema
+        run: npm run verify:exports:sarif
+      - name: Collect a synthetic performance baseline (not a latency gate)
+        run: |
+          mkdir -p dist
+          node scripts/evaluation/benchmark.mjs --quick --output dist/benchmark-quick.json > /dev/null
+      - name: Pack exactly the built files to be tested
+        id: pack
+        run: |
+          node scripts/packaging/pack-packages.mjs --out-dir dist
+          node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('dist/manifest.json', 'utf8')).artifacts.find(pkg => pkg.name === 'pinwhy'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'tarball=' + pkg.filename + '\n');"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pinwhy-release-candidate
+          path: |
+            dist/*.tgz
+            dist/manifest.json
+            dist/benchmark-quick.json
+            dist/export-consumers/
+          retention-days: 14
+
+  runtime:
+    name: Packed runtime / ${{ matrix.os }} / Node ${{ matrix.node }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['18', '22', '24']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: pinwhy-release-candidate
+          path: artifact
+      # Deliberately no npm ci here: the runtime must work without frontend devDependencies.
+      - name: Install the same tarball into a clean temporary prefix and exercise its CLI
+        run: node scripts/packaging/verify-package.mjs --tarball artifact/${{ needs.build.outputs.tarball }}
+      - name: Verify SDK and CLI consumers against the same four package artifacts
+        run: node scripts/packaging/verify-npm-packages.mjs --artifacts-dir artifact
+
+  platform:
+    name: Native launchers and lifecycle fixtures / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # Fixtures never register a real user job. Native launcher/Bash argument
+      # handling and Windows task command-line parsing run on their actual OS.
+      - name: Verify diagnostics, launchers and isolated lifecycle rollback
+        run: node --test test/integration/doctor.test.js test/integration/launcher-platform.test.js test/integration/platform-services.test.js test/integration/setup-service.test.js test/integration/release.test.js
+
+  dsh-unit:
+    name: Isolated DSH adapter / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.19.0', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      # Unit fixtures do not load the host SDK or need an installed DSH/model account.
+      # The real-CLI test runs against this checkout's kernel, so the adapter is checked against the contract it ships with.
+      - run: npm --prefix plugins/dsh-pinwhy test
+        env:
+          PINWHY_TEST_CLI: ${{ github.workspace }}/bin/pinwhy.js
+      - run: npm --prefix plugins/dsh-pinwhy run check
+      # Real Host loader/settings and paid-model E2E remain explicit local release checks.
+
+  site:
+    name: Build documentation site (Node 24)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm --prefix site ci
+      - name: Build site and generate all 6 localized route shells
+        run: npm --prefix site run build
+      - name: Verify localized route outputs and absence of raw captures
+        run: |
+          for route in index.html en/index.html security/index.html en/security/index.html dsh/index.html en/dsh/index.html; do
+            test -f "site/dist/$route" || { echo "Missing site/dist/$route" >&2; exit 1; }
+          done
+          test ! -e site/dist/shots/dsh
