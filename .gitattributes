@@ -8,3 +8,4 @@
 
 # Keep the vendored official schema byte-identical to its recorded SHA-256.
 test/fixtures/sarif/sarif-schema-2.1.0.json -text
+*.html linguist-detectable=false
