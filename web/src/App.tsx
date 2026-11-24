@@ -9,7 +9,7 @@ import { EMPTY_FILTER, type NodeFilter } from './presentation';
 import { useGraphStream } from './api/use-graph-stream';
 import { useUltraStream } from './api/use-ultra-stream';
 import { Inspector } from './panels/Inspector';
-import { Topbar } from './panels/Topbar';
+import { Topbar, type UltraLensMode } from './panels/Topbar';
 import { t } from './i18n';
 import { SessionDrafts } from './session-drafts';
 import { useWorkspaceData } from './workspace/use-workspace-data';
@@ -24,6 +24,7 @@ import { useWorkspaceTimeline } from './workspace/use-workspace-timeline';
 import { useWorkspaceChrome, useWorkspaceShortcuts } from './workspace/use-workspace-chrome';
 import { useAuditNavigation } from './workspace/use-audit-navigation';
 import { useEmbedHost } from './workspace/use-embed-host';
+import { WorkspaceBanners } from './workspace/WorkspaceBanners';
 import { WorkspaceCanvas } from './workspace/WorkspaceCanvas';
 import { WorkspaceDialogs } from './workspace/WorkspaceDialogs';
 import { WorkspaceSidebar } from './workspace/WorkspaceSidebar';
@@ -55,6 +56,9 @@ function Workspace() {
   const ultraMode = workspace === 'ultra';
   const canvasMode = auditMode ? 'logic' : mode;
   const ultraSnapshot = useUltraStream(ultraMode, asOf, isStatic, snapshot);
+  const [ultraLens, setUltraLens] = useState<UltraLensMode>('constellation');
+  const [ultraPanelOpen, setUltraPanelOpen] = useState(true);
+  const [ultraResetSignal, setUltraResetSignal] = useState(0);
   const [ultraInspectorOpen, setUltraInspectorOpen] = useState(false);
   useEffect(() => {
     if (!ultraMode || !selectedId) setUltraInspectorOpen(false);
@@ -158,7 +162,7 @@ function Workspace() {
     ? (auditOcclusion.right > 0 ? `${Math.round(auditOcclusion.right + 8)}px` : '400px')
     : undefined;
 
-  useWorkspaceShortcuts(clearSelection, dialogs.setPaletteOpen, dialogs.setShortcutsOpen, dialogs.setSidebarOpen, {
+  useWorkspaceShortcuts(clearSelection, dialogs.setPaletteOpen, dialogs.setShortcutsOpen, ultraMode ? setUltraPanelOpen : dialogs.setSidebarOpen, {
     enabled: Boolean(snapshot) && !scene3d && !ultraMode && (!auditMode || showAuditGraph),
     onFit: fitCanvas,
     onLocate: !auditMode && !ultraMode && currentId ? () => focusNode(currentId) : undefined,
@@ -199,60 +203,79 @@ function Workspace() {
 
   return (
     <div className="flex h-full flex-col">
-      {!ultraMode && (
-        <Topbar
-          compact={presentation.embedded}
-          title={snapshot.meta.title || t('app.untitledTask')}
-          build={snapshot.meta.build}
-          workspace={workspace}
-          onWorkspace={switchWorkspace}
-          mode={mode}
-          onMode={switchMode}
-          agentId={agentId}
-          agentIds={agentIds}
-          onAgent={setAgentId}
-          theme={appearance.theme}
-          onTheme={toggleTheme}
-          connection={connection}
-          isStatic={isStatic}
-          sidebarOpen={dialogs.sidebarOpen}
-          onToggleSidebar={() => dialogs.setSidebarOpen((open) => !open)}
-          onSearch={() => dialogs.setPaletteOpen(true)}
-          onDigest={() => dialogs.setDigestOpen(true)}
-          onNew={writable ? () => dialogs.setNewOpen(true) : undefined}
-          digestRef={digestTrigger}
-          activities={activities}
-          activityTotal={stats.activities || activities.length}
-          showEmptyActivity={reading.showEmptyActivity}
-          timelineOpen={timelineOpen}
-          onTimeline={toggleTimeline}
-          onSettings={() => dialogs.openSettings()}
-          onAbout={() => dialogs.openSettings('about')}
-        />
-      )}
+      <Topbar
+        compact={presentation.embedded}
+        title={snapshot.meta.title || t('app.untitledTask')}
+        build={snapshot.meta.build}
+        workspace={workspace}
+        onWorkspace={switchWorkspace}
+        mode={mode}
+        onMode={switchMode}
+        ultraLens={ultraLens}
+        onUltraLens={(next) => runViewTransition(() => setUltraLens(next))}
+        ultraPanelOpen={ultraPanelOpen}
+        onToggleUltraPanel={() => setUltraPanelOpen((open) => !open)}
+        onResetUltraView={() => setUltraResetSignal((n) => n + 1)}
+        agentId={agentId}
+        agentIds={agentIds}
+        onAgent={setAgentId}
+        theme={appearance.theme}
+        onTheme={toggleTheme}
+        connection={connection}
+        isStatic={isStatic}
+        sidebarOpen={dialogs.sidebarOpen}
+        onToggleSidebar={() => dialogs.setSidebarOpen((open) => !open)}
+        onSearch={() => dialogs.setPaletteOpen(true)}
+        onDigest={() => dialogs.setDigestOpen(true)}
+        onNew={writable ? () => dialogs.setNewOpen(true) : undefined}
+        digestRef={digestTrigger}
+        activities={activities}
+        activityTotal={stats.activities || activities.length}
+        showEmptyActivity={reading.showEmptyActivity}
+        timelineOpen={timelineOpen}
+        onTimeline={toggleTimeline}
+        onSettings={() => dialogs.openSettings()}
+        onAbout={() => dialogs.openSettings('about')}
+      />
 
       {ultraMode ? (
         <main className="relative flex min-h-0 flex-1 flex-col" aria-label={t('ultra.aria')}>
           <UltraWorkspace
             snapshot={snapshot}
             ultra={ultraSnapshot}
-            theme={appearance.theme}
-            onTheme={toggleTheme}
-            connection={connection}
-            isStatic={isStatic}
+            lens={ultraLens}
+            onLensChange={setUltraLens}
+            panelOpen={ultraPanelOpen}
+            onPanelOpenChange={setUltraPanelOpen}
+            resetSignal={ultraResetSignal}
+            onResetView={() => setUltraResetSignal((n) => n + 1)}
+            backdrop={canvas.backdrop}
+            inspectorWidth={reading.inspectorWidth}
+            onInspectorWidthChange={reading.setInspectorWidth}
+            showZoomSlider={canvas.showZoomSlider}
+            changes={activeChanges}
             writable={writable}
             selectedId={selectedId}
-            timelineOpen={timelineOpen}
             onSelectNode={(id) => id ? setSelectedId(id) : clearSelection()}
             onInspectFullNode={(id) => { setSelectedId(id); setUltraInspectorOpen(true); }}
-            onWorkspace={switchWorkspace}
-            onSearch={() => dialogs.setPaletteOpen(true)}
-            onDigest={() => dialogs.setDigestOpen(true)}
             onNew={writable ? () => dialogs.setNewOpen(true) : undefined}
             onTimeline={toggleTimeline}
-            onSettings={() => dialogs.openSettings()}
-            onAbout={() => dialogs.openSettings('about')}
             onReload={reload}
+          />
+          <WorkspaceBanners
+            offlineShown={offlineShown}
+            syncedAt={syncedAt}
+            timelineActive={timeline.active}
+            timelinePoint={timeline.point}
+            asOf={asOf}
+            onBackToNow={() => { timeline.pause(); setAsOf(null); }}
+            isStatic={isStatic}
+            pastPoint={snapshot.meta.asOf}
+            hidden={0}
+            onShowAll={() => switchMode('all')}
+            laying={0}
+            notice={notice}
+            offsetTop
           />
           {ultraInspectorOpen && selected && (
             <Inspector
@@ -457,7 +480,7 @@ function Workspace() {
         syncedAt={syncedAt}
         canExport={!ultraMode && (!auditMode || showAuditGraph) && Boolean(projection?.nodes.length) && nodes.length > 0 && !exporting}
         exportImage={exportImage}
-        onSelectNode={(id) => ultraMode ? setSelectedId(id) : focusNode(id)}
+        onSelectNode={(id) => { if (ultraMode) { setSelectedId(id); setUltraPanelOpen(true); } else { focusNode(id); } }}
         onSwitchMode={switchMode}
         onToggleTheme={toggleTheme}
         onThemeMode={changeThemeMode}

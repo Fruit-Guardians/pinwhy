@@ -2,74 +2,70 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { BrandMark } from '../../../BrandMark';
 import { t } from '../../../i18n';
-import type { BoardNode, GraphSnapshot, UltraSnapshot, WorkspaceMode } from '../../../types';
-import type { Connection } from '../../../api/use-graph-stream';
-import { buildUltraModel, type UltraFilter, type UltraLens, type UltraOrbitalBar } from '../../ultra';
+import type { UltraLensMode } from '../../../panels/Topbar';
+import { INSPECTOR_WIDTH_RANGE, type CanvasBackdrop } from '../../../preferences';
+import type { BoardNode, GraphSnapshot, UltraSnapshot } from '../../../types';
+import { buildUltraModel, type UltraFilter, type UltraOrbitalBar } from '../../ultra';
+import type { NodeChange } from '../../use-workspace-presentation';
 import { UltraConstellationView } from './UltraConstellationView';
 import { UltraDrawer } from './UltraDrawer';
 import { UltraGatesView } from './UltraGatesView';
-import { UltraTopbar } from './UltraTopbar';
 import { UltraTreemapView } from './UltraTreemapView';
 
 type Props = {
   snapshot: GraphSnapshot;
   ultra: UltraSnapshot | null;
-  theme: 'light' | 'dark';
-  onTheme?: (origin?: { x: number; y: number }) => void;
-  connection: Connection;
-  isStatic: boolean;
+  lens?: UltraLensMode;
+  onLensChange?: (next: UltraLensMode) => void;
+  panelOpen?: boolean;
+  onPanelOpenChange?: (open: boolean) => void;
+  resetSignal?: number;
+  onResetView?: () => void;
+  backdrop?: CanvasBackdrop;
+  inspectorWidth?: number;
+  onInspectorWidthChange?: (width: number) => void;
+  showZoomSlider?: boolean;
+  changes?: ReadonlyMap<string, NodeChange> | null;
   writable: boolean;
   selectedId: string | null;
-  timelineOpen: boolean;
   onSelectNode: (id: string | null) => void;
   onInspectFullNode: (id: string) => void;
-  onWorkspace: (next: WorkspaceMode) => void;
-  onSearch: () => void;
-  onDigest: () => void;
   onNew?: () => void;
   onTimeline?: () => void;
-  onSettings?: () => void;
-  onAbout?: () => void;
   onReload: () => Promise<void>;
 };
 
 export function UltraWorkspace({
   snapshot,
   ultra,
-  theme,
-  onTheme,
-  connection,
-  isStatic,
+  lens = 'constellation',
+  onLensChange,
+  panelOpen = true,
+  onPanelOpenChange,
+  resetSignal = 0,
+  onResetView,
+  backdrop = 'dots',
+  inspectorWidth = INSPECTOR_WIDTH_RANGE.default,
+  onInspectorWidthChange,
+  showZoomSlider = false,
+  changes = null,
   writable,
   selectedId,
-  timelineOpen,
   onSelectNode,
   onInspectFullNode,
-  onWorkspace,
-  onSearch,
-  onDigest,
   onNew,
   onTimeline,
-  onSettings,
-  onAbout,
   onReload,
 }: Props) {
-  const [lens, setLens] = useState<'constellation' | 'treemap' | 'gaps'>('constellation');
-  const [skinOverride, setSkinOverride] = useState<'obsidian' | 'carbon' | null>(null);
   const [filter, setFilter] = useState<UltraFilter>('all');
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [selectedBarId, setSelectedBarId] = useState<string | null>(null);
   const [drilledSector, setDrilledSector] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
-  const [resetSignal, setResetSignal] = useState(0);
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null);
 
-  const effectiveLens: UltraLens = lens;
-  const activeSkin = skinOverride ?? (lens === 'treemap' ? 'carbon' : 'obsidian');
-
   const model = useMemo(
-    () => buildUltraModel(snapshot, ultra, { lens: effectiveLens, filter }),
-    [snapshot, ultra, effectiveLens, filter],
+    () => buildUltraModel(snapshot, ultra, { lens, filter }),
+    [snapshot, ultra, lens, filter],
   );
 
   const selectedNode: BoardNode | null = selectedId ? model.byId.get(selectedId) ?? null : null;
@@ -96,6 +92,9 @@ export function UltraWorkspace({
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) {
         return;
       }
+      if (document.querySelector('[role="dialog"], [role="menu"]')) {
+        return;
+      }
       if (event.key === 'Escape') {
         if (selectedNode) {
           onSelectNode(null);
@@ -109,7 +108,7 @@ export function UltraWorkspace({
       } else if (event.metaKey || event.ctrlKey || event.altKey) {
         return;
       } else if (event.key === '0') {
-        setResetSignal((n) => n + 1);
+        onResetView?.();
       } else if ((event.key === 'j' || event.key === 'J' || event.key === 'k' || event.key === 'K') && lens !== 'gaps') {
         const navBars = model.displayBars.filter((b) => b.matchesFilter);
         if (navBars.length === 0) return;
@@ -129,7 +128,7 @@ export function UltraWorkspace({
         setSelectedSector(nextBar.sector);
         setSelectedBarId(nextBar.id);
         onSelectNode(null);
-        setPanelOpen(true);
+        onPanelOpenChange?.(true);
         if (lens === 'treemap' && drilledSector && drilledSector !== nextBar.sector) {
           setDrilledSector(nextBar.sector);
         }
@@ -143,28 +142,28 @@ export function UltraWorkspace({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedNode, selectedBarId, drilledSector, selectedSector, lens, model.displayBars, writable, onNew, onTimeline, onSelectNode]);
+  }, [selectedNode, selectedBarId, drilledSector, selectedSector, lens, model.displayBars, writable, onNew, onTimeline, onSelectNode, onPanelOpenChange, onResetView]);
 
   const handleSelectSector = (sectorName: string) => {
     setSelectedSector(sectorName);
     setSelectedBarId(null);
     onSelectNode(null);
-    setPanelOpen(true);
+    onPanelOpenChange?.(true);
   };
 
   const handleSelectBar = (bar: UltraOrbitalBar) => {
     setSelectedSector(bar.sector);
     setSelectedBarId(bar.id);
     onSelectNode(null);
-    setPanelOpen(true);
-    if (lens === 'gaps') setLens('constellation');
+    onPanelOpenChange?.(true);
+    if (lens === 'gaps') onLensChange?.('constellation');
   };
 
   const handleSelectNode = (nodeId: string, sectorName?: string) => {
     const sec = sectorName || model.nodeDisplaySectorMap.get(nodeId) || model.nodeSectorMap.get(nodeId) || null;
     if (sec) setSelectedSector(sec);
     onSelectNode(nodeId);
-    setPanelOpen(true);
+    onPanelOpenChange?.(true);
   };
 
   const handleClear = () => {
@@ -181,12 +180,6 @@ export function UltraWorkspace({
     } catch { /* Clipboard permission optional. */ }
   };
 
-  const statusText = model.sourceMode === 'ledger'
-    ? model.allClear
-      ? t('ultra.status.complete')
-      : t('ultra.status.active')
-    : t('ultra.status.idle');
-
   const isEmpty = model.displaySectors.length === 0;
   const s1Count = model.metrics.awakenedChains;
   const s2Count = new Set([
@@ -194,36 +187,10 @@ export function UltraWorkspace({
     ...model.gaps.openThreads.map((n) => n.id),
     ...model.gaps.unresolvedAnomalies.map((n) => n.id),
   ]).size;
-  const goalTitle = model.goal?.title || snapshot.meta?.title || t('app.untitledTask');
   const doneLines = Math.max(0, model.metrics.totalLines - model.metrics.pendingLines);
 
   return (
-    <div data-ultra-skin={activeSkin} data-ultra-theme={theme} className="ultra-shell flex min-h-0 flex-1 flex-col">
-      <UltraTopbar
-        goalTitle={goalTitle}
-        statusText={statusText}
-        isStatic={isStatic}
-        connection={connection}
-        theme={theme}
-        lens={lens}
-        activeSkin={activeSkin}
-        writable={writable}
-        timelineOpen={timelineOpen}
-        panelOpen={panelOpen}
-        onAbout={onAbout}
-        onSetLens={setLens}
-        onSetSkin={setSkinOverride}
-        onSearch={onSearch}
-        onNew={onNew}
-        onTimeline={onTimeline}
-        onDigest={onDigest}
-        onTheme={onTheme}
-        onSettings={onSettings}
-        onResetView={() => setResetSignal((n) => n + 1)}
-        onShowPanel={() => setPanelOpen(true)}
-        onWorkspace={onWorkspace}
-      />
-
+    <div data-backdrop={backdrop} className="ultra-shell flex min-h-0 flex-1 flex-col">
       {/* Main Split Stage + Docked Right Inspector */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div className="relative min-w-0 flex-1 overflow-hidden">
@@ -247,6 +214,7 @@ export function UltraWorkspace({
           ) : lens === 'gaps' ? (
             <UltraGatesView
               model={model}
+              changes={changes}
               onSelectBar={handleSelectBar}
               onSelectSector={handleSelectSector}
               onSelectNode={handleSelectNode}
@@ -260,7 +228,7 @@ export function UltraWorkspace({
               drilledSector={drilledSector}
               onFilterChange={setFilter}
               onDrillSector={setDrilledSector}
-              onOpenGates={() => setLens('gaps')}
+              onOpenGates={() => onLensChange?.('gaps')}
               onSelectSector={handleSelectSector}
               onSelectBar={handleSelectBar}
             />
@@ -272,8 +240,9 @@ export function UltraWorkspace({
               selectedBarId={selectedBarId}
               selectedNodeId={selectedId}
               resetSignal={resetSignal}
+              showZoomSlider={showZoomSlider}
               onFilterChange={setFilter}
-              onOpenGates={() => setLens('gaps')}
+              onOpenGates={() => onLensChange?.('gaps')}
               onSelectSector={handleSelectSector}
               onSelectBar={handleSelectBar}
               onSelectNode={handleSelectNode}
@@ -285,14 +254,17 @@ export function UltraWorkspace({
         {!isEmpty && lens !== 'gaps' && (
           <UltraDrawer
             open={panelOpen}
+            width={inspectorWidth}
+            onWidthChange={onInspectorWidthChange}
             viewMode={drawerViewMode}
             preferMicroGraph={lens === 'treemap'}
             sector={activeSector}
             selectedBar={selectedBar}
             selectedNode={selectedNode}
             model={model}
+            changes={changes}
             writable={writable}
-            onToggleCollapse={() => setPanelOpen(false)}
+            onToggleCollapse={() => onPanelOpenChange?.(false)}
             onBackToSector={handleSelectSector}
             onBackToSlice={selectedBar ? () => onSelectNode(null) : undefined}
             onSelectBar={handleSelectBar}
@@ -346,7 +318,7 @@ export function UltraWorkspace({
           ) : model.commitmentComplete ? (
             <button
               type="button"
-              onClick={() => setLens('gaps')}
+              onClick={() => onLensChange?.('gaps')}
               className="ultra-mono inline-flex items-center gap-1.5 rounded border border-[var(--u-cyan)]/35 bg-[var(--u-cyan)]/10 px-2 py-0.5 text-[10.5px] text-[var(--u-cyan)]"
             >
               <span>{t('ultra.commitmentsDoneBoundariesOpen', { count: s1Count + s2Count })}</span>
@@ -354,7 +326,7 @@ export function UltraWorkspace({
           ) : (
             <button
               type="button"
-              onClick={() => setLens('gaps')}
+              onClick={() => onLensChange?.('gaps')}
               className="ultra-mono text-[var(--u-amber)] underline underline-offset-4"
             >
               {t('ultra.gates.breadthDoneGapsOpen')}

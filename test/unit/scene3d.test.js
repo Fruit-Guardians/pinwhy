@@ -1,23 +1,10 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { execFileSync } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { openWebModules } from '../helpers/load-web-module.mjs';
 
-const root = fileURLToPath(new URL('../../', import.meta.url));
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinwhy-scene3d-tests-'));
-after(() => fs.rmSync(dir, { recursive: true, force: true }));
-execFileSync(process.execPath, [path.join(root, 'node_modules/typescript/bin/tsc'), '--target', 'ES2022', '--module', 'ESNext', '--moduleResolution', 'Bundler', '--skipLibCheck', '--outDir', dir, path.join(root, 'web/src/scene3d/model.ts')], { cwd: dir });
-// Keep the tests portable on Node 18+ without a TS execution loader.
-for (const entry of fs.readdirSync(dir, { recursive: true }).filter((name) => name.endsWith('.js'))) {
-  const file = path.join(dir, entry);
-  fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(/from '(\.\.?\/[^']+)'/g, (_all, name) => `from '${name}.js'`));
-}
-fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ type: 'module' }));
-fs.symlinkSync(path.join(root, 'node_modules'), path.join(dir, 'node_modules'), 'dir');
-const { CAMERA_PRESETS, boardBounds, bootDepths, chamfer, chipHeight, homeFrame, ratedSeverity, resample, ribbonStrip, roundedRectPoints, sceneTraces, shapeKey, traceArrowhead, traceCourse, tracesKey, visibleTraces, wrapText } = await import(pathToFileURL(path.join(dir, 'scene3d/model.js')).href);
+const web = await openWebModules();
+after(() => web.close());
+const { CAMERA_PRESETS, boardBounds, bootDepths, chamfer, chipHeight, homeFrame, ratedSeverity, resample, ribbonStrip, roundedRectPoints, sceneTraces, shapeKey, traceArrowhead, traceCourse, tracesKey, visibleTraces, wrapText } = await web.load('/src/scene3d/model.ts');
 
 const W = 2.88, D = 1.28;
 /** x and z are the chip's centre, as sceneLayout places it. */

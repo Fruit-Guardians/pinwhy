@@ -1,5 +1,5 @@
 import { useState, type RefObject } from 'react';
-import { Check, ChevronDown, FileText, Focus, GitBranch, History, ListTree, Moon, MoreHorizontal, PanelLeft, Plus, Search, Settings2, Sun, Users } from 'lucide-react';
+import { Check, ChevronDown, FileText, Focus, GitBranch, History, LayoutGrid, ListTree, Moon, MoreHorizontal, Orbit, PanelLeft, PanelRight, Plus, RotateCcw, Search, Settings2, ShieldCheck, Sun, Users } from 'lucide-react';
 import { Select } from 'radix-ui';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import type { Connection } from '../api/use-graph-stream';
 import type { Activity, BuildInfo, ViewMode, WorkspaceMode } from '../types';
 import { t } from '../i18n';
 
+export type UltraLensMode = 'constellation' | 'treemap' | 'gaps';
+
 type Props = {
   title: string;
   build?: BuildInfo;
@@ -21,6 +23,11 @@ type Props = {
   onWorkspace: (workspace: WorkspaceMode) => void;
   mode: ViewMode;
   onMode: (mode: ViewMode) => void;
+  ultraLens?: UltraLensMode;
+  onUltraLens?: (lens: UltraLensMode) => void;
+  ultraPanelOpen?: boolean;
+  onToggleUltraPanel?: () => void;
+  onResetUltraView?: () => void;
   agentId: string;
   agentIds: string[];
   onAgent: (agentId: string) => void;
@@ -66,10 +73,21 @@ function ViewSwitcher({ mode, onMode }: { mode: ViewMode; onMode: (mode: ViewMod
   );
 }
 
+/** The three Ultra lenses mirror ViewSwitcher inside the unified Topbar. */
+function UltraLensSwitcher({ lens, onLens }: { lens: UltraLensMode; onLens: (lens: UltraLensMode) => void }) {
+  return (
+    <Segmented<UltraLensMode> value={lens} onValueChange={onLens} aria-label={t('topbar.views')}>
+      <SegmentedItem value="constellation" aria-label={t('ultra.lens.constellation')}><Orbit /><span className="max-sm:hidden">{t('ultra.lens.constellation')}</span></SegmentedItem>
+      <SegmentedItem value="treemap" aria-label={t('ultra.lens.treemap')}><LayoutGrid /><span className="max-sm:hidden">{t('ultra.lens.treemap')}</span></SegmentedItem>
+      <SegmentedItem value="gaps" aria-label={t('ultra.lens.gaps')}><ShieldCheck /><span className="max-sm:hidden">{t('ultra.lens.gaps')}</span></SegmentedItem>
+    </Segmented>
+  );
+}
+
 const MENU_ROW = 'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-foreground outline-none transition-colors hover:bg-accent focus-visible:bg-accent';
 
 export function Topbar(props: Props) {
-  const { title, build, workspace, onWorkspace, mode, onMode, agentId, agentIds, onAgent, theme, onTheme, connection, isStatic, sidebarOpen, onToggleSidebar, onSearch, onDigest, onNew, digestRef, activities, activityTotal, showEmptyActivity = false, timelineOpen, onTimeline, onSettings, onAbout, compact } = props;
+  const { title, build, workspace, onWorkspace, mode, onMode, ultraLens, onUltraLens, ultraPanelOpen, onToggleUltraPanel, onResetUltraView, agentId, agentIds, onAgent, theme, onTheme, connection, isStatic, sidebarOpen, onToggleSidebar, onSearch, onDigest, onNew, digestRef, activities, activityTotal, showEmptyActivity = false, timelineOpen, onTimeline, onSettings, onAbout, compact } = props;
   const status = isStatic ? { label: t('topbar.static'), dot: 'bg-strong' } : CONNECTION[connection];
   const showActivity = activityTotal > 0 || activities.length > 0 || showEmptyActivity;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -79,7 +97,9 @@ export function Topbar(props: Props) {
     // version, about and appearance switch, so repeating them here would be a second header.
     return (
       <header data-presentation="embedded" className="flex h-11 shrink-0 items-center gap-1.5 border-b bg-background px-2">
-        <IconButton label={sidebarOpen ? t('topbar.collapseNav') : t('topbar.expandNav')} aria-pressed={sidebarOpen} onClick={onToggleSidebar}><PanelLeft /></IconButton>
+        {workspace !== 'ultra' && (
+          <IconButton label={sidebarOpen ? t('topbar.collapseNav') : t('topbar.expandNav')} aria-pressed={sidebarOpen} onClick={onToggleSidebar}><PanelLeft /></IconButton>
+        )}
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
           <span className="min-w-0 truncate text-[13px] font-medium text-subtle" title={title}>{title}</span>
           <span role="status" title={status.label} className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
@@ -89,7 +109,11 @@ export function Topbar(props: Props) {
         <div className="flex shrink-0 items-center gap-0.5">
           <IconButton label={t('topbar.search')} onClick={onSearch}><Search /></IconButton>
           {workspace === 'general' && <ViewSwitcher mode={mode} onMode={onMode} />}
+          {workspace === 'ultra' && ultraLens && onUltraLens && <UltraLensSwitcher lens={ultraLens} onLens={onUltraLens} />}
           {showActivity && <ActivityPopover activities={activities} total={activityTotal} />}
+          {workspace === 'ultra' && ultraLens !== 'gaps' && onToggleUltraPanel && (
+            <IconButton label={ultraPanelOpen ? t('ultra.inspector.hidePanel') : t('ultra.inspector.showPanel')} aria-pressed={Boolean(ultraPanelOpen)} onClick={onToggleUltraPanel}><PanelRight /></IconButton>
+          )}
           <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild ref={digestRef}>
               <Button size="icon-sm" aria-label={t('palette.commands')} title={t('palette.commands')} aria-haspopup="menu" data-compact-menu><MoreHorizontal /></Button>
@@ -144,7 +168,9 @@ export function Topbar(props: Props) {
   return (
     <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 border-b bg-background px-3 py-2 lg:h-12 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:gap-x-4 lg:py-0">
       <div className="flex min-w-0 items-center gap-2">
-        <IconButton label={sidebarOpen ? t('topbar.collapseNav') : t('topbar.expandNav')} aria-pressed={sidebarOpen} onClick={onToggleSidebar}><PanelLeft /></IconButton>
+        {workspace !== 'ultra' && (
+          <IconButton label={sidebarOpen ? t('topbar.collapseNav') : t('topbar.expandNav')} aria-pressed={sidebarOpen} onClick={onToggleSidebar}><PanelLeft /></IconButton>
+        )}
         <button
           type="button"
           aria-label={t('about.open')}
@@ -187,6 +213,7 @@ export function Topbar(props: Props) {
           <SegmentedItem value="logic" aria-label={t('view.logicLabel')}><GitBranch /><span className="max-sm:hidden">{t('view.logic')}</span></SegmentedItem>
           <SegmentedItem value="all" aria-label={t('view.allLabel')}><ListTree /><span className="max-sm:hidden">{t('view.all')}</span></SegmentedItem>
         </Segmented>}
+        {workspace === 'ultra' && ultraLens && onUltraLens && <UltraLensSwitcher lens={ultraLens} onLens={onUltraLens} />}
         {agentIds.length > 1 && (
           <Select.Root value={agentId} onValueChange={onAgent}>
             <Select.Trigger asChild aria-label={t('topbar.agent')} title={`${t('topbar.agentHint')}\n${agentId}`}>
@@ -222,7 +249,7 @@ export function Topbar(props: Props) {
         <Button
           size="sm"
           variant="ghost"
-          className={cn('max-md:hidden bg-secondary/60 text-subtle hover:bg-secondary hover:text-foreground', sidebarOpen && 'lg:hidden')}
+          className={cn('max-md:hidden bg-secondary/60 text-subtle hover:bg-secondary hover:text-foreground', workspace !== 'ultra' && sidebarOpen && 'lg:hidden')}
           onClick={onSearch}
           aria-label={t('topbar.searchCommands')}
         >
@@ -233,6 +260,12 @@ export function Topbar(props: Props) {
         {onTimeline && <IconButton label={timelineOpen ? t('timeline.close') : t('timeline.open')} aria-pressed={timelineOpen} onClick={onTimeline}><History /></IconButton>}
         {onNew && <Button size="sm" variant="default" className="shadow-xs" onClick={onNew} aria-label={t('topbar.newNode')}><Plus className="size-3.5" /><span className="max-sm:hidden">{t('topbar.new')}</span></Button>}
         <Button ref={digestRef} size="sm" variant="ghost" className="text-subtle hover:text-foreground" onClick={onDigest} aria-label={t('topbar.digestLabel')}><FileText className="size-3.5" /><span className="max-sm:hidden">{t('topbar.digest')}</span></Button>
+        {workspace === 'ultra' && ultraLens === 'constellation' && onResetUltraView && (
+          <IconButton label={t('ultra.resetView')} onClick={onResetUltraView}><RotateCcw /></IconButton>
+        )}
+        {workspace === 'ultra' && ultraLens !== 'gaps' && onToggleUltraPanel && (
+          <IconButton label={ultraPanelOpen ? t('ultra.inspector.hidePanel') : t('ultra.inspector.showPanel')} aria-pressed={Boolean(ultraPanelOpen)} onClick={onToggleUltraPanel}><PanelRight /></IconButton>
+        )}
         {onSettings && <IconButton label={t('settings.open')} shortcut="⌘," onClick={onSettings}><Settings2 /></IconButton>}
         <IconButton label={theme === 'light' ? t('theme.toDark') : t('theme.toLight')} onClick={(event) => onTheme({ x: event.clientX, y: event.clientY })}>{theme === 'light' ? <Moon /> : <Sun />}</IconButton>
       </div>

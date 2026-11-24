@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { openWebModules } from '../helpers/load-web-module.mjs';
 import { isAuxiliaryPath, scanTargetTree, sliceContent } from '../../lib/ultra/scanner.js';
-import { computeEffectiveSlices, parseProbeLocation } from '../../lib/ultra/slices.js';
+import { computeEffectiveSlices, formatBreakCycleCommand, parseProbeLocation } from '../../lib/ultra/slices.js';
 import { addUltraProbes, buildUltraSnapshot, excludeUltraSlices, markUltraDone, nextUltraBatches, reopenUltraSlices, syncUltra } from '../../lib/ultra/engine.js';
 import { appendUltraRecord } from '../../lib/ultra/ledger.js';
 import { addEdge, addNode } from '../../lib/store.js';
@@ -248,7 +248,7 @@ test('Ultra CLI lifecycle enforces breadth completion, shallow bounce, dependenc
   assert.equal(fs.readFileSync(eventsFile, 'utf8'), eventsAfterHumanTest);
 });
 
-test('server exposes /api/ultra and /ultra-events SSE stream, and HTML export embeds window.__PINWHY_ULTRA__', async (t) => {
+async function setupUltraHistoryProject(t) {
   const dir = makeTempProject(t);
   writeFiles(dir, { 'src/app.js': 'export const ok = true;\n' });
   assert.equal(run(PINWHY_CLI, ['init', '--title', 'Server Ultra Test', '--cwd', dir], dir).status, 0);
@@ -260,11 +260,63 @@ test('server exposes /api/ultra and /ultra-events SSE stream, and HTML export em
   assert.equal(run(PINWHY_CLI, ['checkpoint', '--summary', 'cp2', '--cwd', dir, '--no-init'], dir).status, 0);
   await new Promise((r) => setTimeout(r, 15));
   markUltraDone(dir, { sliceIds: [s1Id], note: 'Pure constant ok=true export with zero inputs' });
+  return { dir, s1Id };
+}
 
+function readFirstSseFrame(url, { timeoutMs = 2000 } = {}) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let req;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      req?.destroy();
+      reject(new Error(`SSE first frame timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    const finish = (fn) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      req?.destroy();
+      fn();
+    };
+    req = http.get(url, (res) => {
+      const contentType = String(res.headers['content-type'] || '');
+      if (res.statusCode !== 200 || !/^text\/event-stream\b/i.test(contentType)) {
+        res.resume();
+        finish(() => reject(new Error(`unexpected SSE response: status=${res.statusCode} content-type=${contentType || '<missing>'}`)));
+        return;
+      }
+      let buf = '';
+      res.on('data', (chunk) => {
+        buf += chunk.toString('utf8');
+        if (buf.includes('\n\n')) {
+          finish(() => resolve(buf.slice(0, buf.indexOf('\n\n') + 2)));
+        }
+      });
+      res.on('end', () => {
+        if (!settled) finish(() => reject(new Error(`SSE stream ended before first frame: ${JSON.stringify(buf)}`)));
+      });
+      res.on('close', () => {
+        if (!settled) finish(() => reject(new Error(`SSE stream ended before first frame: ${JSON.stringify(buf)}`)));
+      });
+      res.on('error', (err) => {
+        if (settled && err?.code === 'ECONNRESET') return;
+        if (!settled) finish(() => reject(err));
+      });
+    });
+    req.on('error', (err) => {
+      if (settled && err?.code === 'ECONNRESET') return;
+      if (!settled) finish(() => reject(err));
+    });
+  });
+}
+
+test('server exposes /api/ultra live and historical ?asOf= snapshots', async (t) => {
+  const { dir } = await setupUltraHistoryProject(t);
   const server = await startServer({ cwd: dir, port: 0, readOnly: true });
   t.after(() => new Promise((resolve) => server.close(resolve)));
-  const port = server.address().port;
-  const base = `http://127.0.0.1:${port}`;
+  const base = `http://127.0.0.1:${server.address().port}`;
 
   const res = await fetch(`${base}/api/ultra`);
   assert.equal(res.status, 200);
@@ -285,37 +337,35 @@ test('server exposes /api/ultra and /ultra-events SSE stream, and HTML export em
   assert.equal(cp2Snap.initialized, true);
   assert.equal(cp2Snap.summary.pending, 1, '?asOf=cp2 must reflect synced pending slice before post-cp2 review');
   assert.equal(cp2Snap.summary.coveredSlices, 0);
+});
 
-  // Check SSE endpoint delivers an `event: ultra` frame cleanly.
-  const frame = await new Promise((resolve, reject) => {
-    const req = http.get(`${base}/ultra-events`, (stream) => {
-      let buf = '';
-      stream.on('data', (chunk) => {
-        buf += chunk.toString('utf8');
-        if (buf.includes('\n\n')) {
-          req.destroy();
-          resolve(buf);
-        }
-      });
-    });
-    req.on('error', (err) => {
-      if (err.code !== 'ECONNRESET') reject(err);
-    });
-  });
+test('server /ultra-events SSE delivers initial ultra frame and fails fast on bad HTTP responses', async (t) => {
+  const { dir } = await setupUltraHistoryProject(t);
+  const server = await startServer({ cwd: dir, port: 0, readOnly: true });
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  const frame = await readFirstSseFrame(`${base}/ultra-events`);
   assert.match(frame, /^event: ultra\ndata: /);
   const ssePayload = JSON.parse(frame.split('\n').find((l) => l.startsWith('data: ')).slice(6));
   assert.equal(ssePayload.schema, 'pinwhy.ultra.v1');
 
-  // Verify offline HTML export embeds __PINWHY_ULTRA__ when built assets exist.
-  if (fs.existsSync(path.join(ROOT, 'public', 'index.html'))) {
-    const htmlOut = path.join(dir, 'ultra-export.html');
-    assert.equal(run(PINWHY_CLI, ['export', '--out', htmlOut, '--cwd', dir], dir).status, 0);
-    const html = fs.readFileSync(htmlOut, 'utf8');
-    assert.match(html, /window\.__PINWHY_DATA__ = .*;/);
-    const ultraLine = html.match(/window\.__PINWHY_ULTRA__ = (.*);/);
-    assert.ok(ultraLine, 'offline HTML embeds __PINWHY_ULTRA__ when Ultra ledger is initialized');
-    assert.equal(JSON.parse(ultraLine[1]).summary.totalSlices, 1);
+  await assert.rejects(() => readFirstSseFrame(`${base}/missing-route`, { timeoutMs: 2000 }), /status=404/);
+});
+
+test('offline HTML export embeds window.__PINWHY_ULTRA__ when Ultra ledger is initialized', async (t) => {
+  if (!fs.existsSync(path.join(ROOT, 'public', 'index.html'))) {
+    t.skip('public/index.html not built');
+    return;
   }
+  const { dir } = await setupUltraHistoryProject(t);
+  const htmlOut = path.join(dir, 'ultra-export.html');
+  assert.equal(run(PINWHY_CLI, ['export', '--out', htmlOut, '--cwd', dir], dir).status, 0);
+  const html = fs.readFileSync(htmlOut, 'utf8');
+  assert.match(html, /window\.__PINWHY_DATA__ = .*;/);
+  const ultraLine = html.match(/window\.__PINWHY_ULTRA__ = (.*);/);
+  assert.ok(ultraLine, 'offline HTML embeds __PINWHY_ULTRA__ when Ultra ledger is initialized');
+  assert.equal(JSON.parse(ultraLine[1]).summary.totalSlices, 1);
 });
 
 test('frontend pure ultra projection handles ledger and board-derived modes without mutating snapshots', async (t) => {
@@ -743,4 +793,88 @@ test('CLI add -> next -> done round-trips locations for normalized, absolute, le
   const doneExt = run(ULTRA_CLI, ['done', `${extItem.path}:${extItem.startLine}`, '--note', 'Verified external integration contract.', '--cwd', dir, '--json'], dir);
   assert.equal(doneExt.status, 0, doneExt.stderr || doneExt.stdout);
   assert.equal(JSON.parse(doneExt.stdout).updated[0].effectiveStatus, 'cleared');
+});
+
+test('Ultra detects mutual dependency cycles, emits non-blocking warnings/hints, preserves breadth convergence, and breaks cleanly', (t) => {
+  const dir = makeTempProject(t);
+  writeFiles(dir, {
+    'src/a.ts': 'export const a = 1;\n',
+    'src/b.ts': 'export const b = 2;\n',
+    'src/c.ts': 'export const c = 3;\n',
+  });
+  assert.equal(run(PINWHY_CLI, ['init', '--title', 'Cycle Detection', '--cwd', dir], dir).status, 0);
+  const synced = syncUltra(dir);
+  const byPath = new Map(synced.snapshot.slices.map((s) => [s.path, s.id]));
+  const s1Id = byPath.get('src/a.ts');
+  const s2Id = byPath.get('src/b.ts');
+  const s3Id = byPath.get('src/c.ts');
+
+  // 1) Self-dependency is ignored with a non-blocking warning.
+  const selfDone = markUltraDone(dir, { sliceIds: [s2Id], note: 'Verified s2 standalone constant export.', dependsOn: [s2Id] });
+  assert.equal(selfDone.updated[0].effectiveStatus, 'cleared');
+  assert.deepEqual(selfDone.updated[0].dependsOn, []);
+  assert.equal(selfDone.warnings?.[0].code, 'self_dependency_ignored');
+
+  // 2) Add probe p1 depending on s1, then mark s1 done depending on p1 -> unresolved 2-cycle.
+  const added = addUltraProbes(dir, { titles: ['Verify a/p1 mutual guard'], sector: 'src', dependsOn: [s1Id] });
+  const p1Id = added.added[0].id;
+  const mutualDone = run(ULTRA_CLI, ['done', s1Id, '--depends-on', p1Id, '--note', 'Relies on p1 mutual check.', '--cwd', dir], dir);
+  assert.equal(mutualDone.status, 0, mutualDone.stderr);
+  assert.match(mutualDone.stdout, /shallow \(unverified-dependency\)/);
+  assert.match(mutualDone.stdout, /Warning \[dependency-cycle\]:/);
+  assert.match(mutualDone.stdout, /--depends-on none/);
+
+  const midNextJson = JSON.parse(run(ULTRA_CLI, ['next', '--sector', 'src', '--max-slices', '10', '--cwd', dir, '--json'], dir).stdout);
+  const scheduledP1 = midNextJson.batches.flatMap((b) => b.slices).find((s) => s.id === p1Id);
+  assert.deepEqual(scheduledP1.dependencyCycle, [p1Id, s1Id, p1Id]);
+  assert.match(scheduledP1.breakHint, new RegExp(`pinwhy-ultra done ${p1Id} --depends-on none`));
+
+  const midNextText = run(ULTRA_CLI, ['next', '--sector', 'src', '--max-slices', '10', '--cwd', dir], dir).stdout;
+  assert.match(midNextText, /\[cycle: p1->s1->p1; break with --depends-on none\]/);
+
+  const midCheckJson = JSON.parse(run(ULTRA_CLI, ['check', '--cwd', dir, '--json'], dir).stdout);
+  assert.equal(midCheckJson.summary.dependencyCycles, 1);
+  assert.equal(midCheckJson.gaps.dependencyCycles[0].resolved, false);
+  assert.deepEqual(midCheckJson.gaps.dependencyCycles[0].cycle, [p1Id, s1Id, p1Id]);
+  assert.deepEqual(midCheckJson.gaps.shallowSlices.find((s) => s.id === s1Id)?.dependencyCycle, [s1Id, p1Id, s1Id]);
+  const midCheckText = run(ULTRA_CLI, ['check', '--cwd', dir], dir).stdout;
+  assert.match(midCheckText, /Dependency cycles \(non-blocking\):/);
+  assert.match(midCheckText, /\(unresolved\)/);
+
+  // 3) Marking p1 done converges both s1 and p1 (breadthComplete continues to converge cleanly) while retaining non-blocking notice.
+  const p1Done = markUltraDone(dir, { sliceIds: [p1Id], note: 'Verified mutual invariant with s1.' });
+  assert.equal(p1Done.updated[0].effectiveStatus, 'cleared');
+  assert.equal(p1Done.warnings?.[0].code, 'dependency_cycle');
+  assert.equal(p1Done.warnings?.[0].resolved, true);
+
+  // Clear s3 as well to verify resolved cycle does not block breadthComplete.
+  markUltraDone(dir, { sliceIds: [s3Id], note: 'Verified independent constant c.' });
+  const convergedCheck = buildUltraSnapshot(dir);
+  assert.equal(convergedCheck.breadthComplete, true);
+  assert.equal(convergedCheck.gaps.dependencyCycles.length, 1);
+  assert.equal(convergedCheck.gaps.dependencyCycles[0].resolved, true);
+
+  // 4) Non-cyclic dependencies are preserved in formatBreakCycleCommand and --depends-on none,<keep>.
+  markUltraDone(dir, { sliceIds: [p1Id], note: 'Also depends on cleared s2.', dependsOn: [s2Id] });
+  const withKeepCheck = buildUltraSnapshot(dir);
+  const p1Entry = withKeepCheck.slices.find((s) => s.id === p1Id);
+  const breakCmd = formatBreakCycleCommand(p1Entry, [p1Id, s1Id]);
+  assert.equal(breakCmd, `pinwhy-ultra done ${p1Id} --depends-on none,${s2Id} --note "<independent verification>"`);
+
+  const clearedCycle = markUltraDone(dir, {
+    sliceIds: [p1Id],
+    dependsOn: ['none', s2Id],
+    note: 'Broken mutual cycle while keeping guard s2.',
+  });
+  assert.deepEqual(clearedCycle.updated[0].dependsOn, [s2Id]);
+  assert.equal(clearedCycle.warnings, undefined);
+  assert.equal(buildUltraSnapshot(dir).gaps.dependencyCycles.length, 0);
+
+  // 5) 3-node cycle across slices (s1 -> s2 -> s3 -> s1).
+  markUltraDone(dir, { sliceIds: [s1Id], note: 'Depends on s2.', dependsOn: ['none', s2Id] });
+  markUltraDone(dir, { sliceIds: [s2Id], note: 'Depends on s3.', dependsOn: [s3Id] });
+  const triDone = markUltraDone(dir, { sliceIds: [s3Id], note: 'Depends back on s1.', dependsOn: [s1Id] });
+  assert.equal(triDone.warnings?.[0].code, 'dependency_cycle');
+  assert.deepEqual(triDone.warnings?.[0].cycle, [s1Id, s2Id, s3Id, s1Id]);
+  assert.equal(triDone.warnings?.[0].resolved, true);
 });

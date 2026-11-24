@@ -122,7 +122,9 @@ export function packPackages({ source = ROOT, outDir = path.join(source, 'dist',
     fs.writeFileSync(path.join(stagedCli, 'package.json'), `${JSON.stringify(cli, null, 2)}\n`);
     for (const name of ['README.md', 'bin']) fs.cpSync(path.join(cliSource, name), path.join(stagedCli, name), { recursive: true });
     fs.copyFileSync(path.join(source, 'LICENSE'), path.join(stagedCli, 'LICENSE'));
-    fs.chmodSync(path.join(stagedCli, 'bin', 'pinwhy.js'), 0o755);
+    for (const entry of ['pinwhy.js', 'pinwhy-ultra.js']) {
+      fs.chmodSync(path.join(stagedCli, 'bin', entry), 0o755);
+    }
     for (const [directory, metadata] of [[stagedCore, core], [source, product], [stagedCli, cli], [adapterSource, adapter]]) {
       const result = spawnSync(process.execPath, [npm, 'pack', '--json', '--ignore-scripts', '--pack-destination', outDir], {
         cwd: directory, env: isolatedPinwhyEnv({ npm_config_update_notifier: 'false' }),

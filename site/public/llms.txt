@@ -1,31 +1,32 @@
 # Pinwhy
 
-> External memory and a visual workspace for AI agents. Pinwhy keeps an agent's judgments, evidence, relations, and current position in the project (`.pinwhy/events.jsonl`), so work resumes from the same place after context compaction, a dropped connection, or a new session. Zero runtime dependencies, Node.js ≥ 18, MIT licensed, data stays local.
+> Local state recorder and visual workspace for AI agents. Pinwhy writes goals, hypotheses, evidence, explicit relations, and checkpoints to project-local `.pinwhy/events.jsonl`, so agents can restore context within token budget and developers can inspect reasoning across sessions. Zero runtime dependencies, Node.js ≥ 18, MIT licensed, data stays local.
 
-中文：Pinwhy 是与宿主无关的 Agent 外置记忆与可视化工作台。把关键判断、正反证据、显式关系与当前位置记在项目本地（`.pinwhy/events.jsonl`）；上下文压缩、断线或切换会话之后，按预算读回同一份现场继续工作。
+中文：Pinwhy 是面向 AI Agent 的本地状态记录工具与可视化工作台。把目标、假设、正反证据、有向关系与检查点以追加事件日志写进项目本地（`.pinwhy/events.jsonl`）；上下文压缩、断线或切换会话后，Agent 通过 CLI 按 Token 预算读回现场，开发者在通用、审计与 Ultra 三视图工作台中核对依据与进展。
 
 ## What it is (and isn't)
 
 - `.pinwhy/events.jsonl` is the append-only single source of truth. `state.json`, `context`, `digest`, the live viewer, and exports are read-only projections rebuilt from events — never a second source of truth.
-- Records goals, observations, facts, hypotheses, questions, findings, vulnerabilities, conditions, and custom types, plus relations explicitly declared by the recorder (`supports`, `contradicts`, `derived-from`, `depends-on`, `answers`, `refines`, `supersedes`, `related-to`, …).
+- Records goals, observations, facts, hypotheses, questions, findings, vulnerabilities, conditions, and custom types, plus relations explicitly declared by the recorder (`supports`, `contradicts`, `derived-from`, `depends-on`, `resolves`, `refines`, `supersedes`, `related-to`, …).
 - Nothing is inferred: creating a node never auto-links edges or moves the cursor. `severity`, `status`, and `confidence` (`suspected`, `static-confirmed`, `reproduced`, `confirmed`) are orthogonal dimensions and never inferred from each other or from node type.
-- Non-interfering by design: `context` returns `{ readOnly: true, prescriptive: false, nextStepSelection: "agent-controlled" }`; `lint` always exits `0` (reports only, never blocks). The agent always decides the next step.
-- The local web workspace listens on `127.0.0.1:4333` by default (`--read-only` disables browser writes) and supports two reading modes over the same authored board:
-  - **General mode**: Context / Logic / Overview views plus an experimental 2.5D circuit-board view.
+- Non-interfering by design: `context` returns `{ readOnly: true, prescriptive: false, nextStepSelection: "agent-controlled" }`; `lint` and `pinwhy-ultra check` exit `0` when reporting findings so they never block the host. The agent always decides the next step.
+- The local web workspace listens on `127.0.0.1:4333` by default (`--read-only` disables browser writes) and provides three reading modes:
+  - **General mode**: Context / Logic / Overview views plus an interactive 2.5D circuit-board view.
   - **Security audit mode**: collapsible `Issue ▸ Candidate` outline, orthogonal Candidate Matrix (`severity × confidence × status`), Two-Wing Dialectical Dossier (`Supports & tethered premises` vs `Contradictions & required conditions`), `Dossier ⇄ Argument graph` switch, and factual multi-actor provenance cues (`Open dispute`, `Cross-verified`, `Single-source`) when multiple authors exist.
+  - **Ultra mode (`pinwhy-ultra`)**: reads the isolated file-slice and probe coverage ledger at `.pinwhy/ultra/ledger.jsonl` across three lenses — Constellation (sector rings & cross-module traces), Treemap (proportional file-size coverage & micro-DAG drawer), and Gate Audit (`C1–C3` commitment gates vs `S1–S2` honest open boundaries), plus human follow-up annotations in the drawer.
 
 ## Install & set up for the user
 
 Follow the official setup guide (`skills/pinwhy/references/setup.md`). Do not initialize a board or install host hooks/skills without explicit user consent, and always keep existing board records intact.
 
-1. Install the stable CLI, web workspace, and full Skill package (`Node.js ≥ 18`):
+1. Install the CLI, built Web workspace, and Skill packages (`Node.js ≥ 18`):
    ```sh
-   npm install --global pinwhy@0.2.0
+   npm install -g pinwhy
    pinwhy --version
    ```
-   (When developing from a source checkout, `node bin/pinwhy.js release install` can install an immutable local release under `~/.local/bin` instead; daily use never runs against a dev branch.)
+   (From a source checkout, `node bin/pinwhy.js release install` installs a local release; daily use should not depend on a dev branch.)
 
-2. Connect the project for the user's host (always pass explicit `--cwd "/abs/path/to/project"`):
+2. Connect the project for the user's host (pass explicit `--cwd "/abs/path/to/project"`):
    - **Claude Code** (Skill + recovery-only hooks + user-level shared background viewer):
      ```sh
      pinwhy setup --target "/abs/path/to/project" --title "My project" --open
@@ -37,12 +38,12 @@ Follow the official setup guide (`skills/pinwhy/references/setup.md`). Do not in
      pinwhy serve --open --cwd "/abs/path/to/project"
      ```
      (Humans in an interactive terminal can run `pinwhy skill install` without `--host` to pick scope and hosts interactively.)
-   - **DeepSeek Harness (`0.2.2-rc.2`)** — independent adapter subpackage in `plugins/dsh-pinwhy/`:
+   - **DeepSeek Harness (`>=0.2.2-rc.2 <1.0.0`, Node `^22.19.0 || >=24.0.0`)** — independent adapter subpackage in `plugins/dsh-pinwhy/`:
      ```sh
      dsh plugin --profile web add /abs/path/to/pinwhy/plugins/dsh-pinwhy
      pinwhy init --cwd "/abs/path/to/project" --json
      ```
-     Then select the project workspace in DSH Settings (or configure `cordis.patch.yml`). Provides 11 typed native tools and an embedded read-only canvas.
+     Then add the workspace under DSH `Plugins → Pinwhy → Settings` or apply via `dsh web --patch /path/to/pinwhy-project.patch.yml`. Provides 11 typed native tools (`pinwhy_diagnose`, `pinwhy_status`, `pinwhy_context`, `pinwhy_node_get`, `pinwhy_node_add`, `pinwhy_node_patch`, `pinwhy_link`, `pinwhy_cursor`, `pinwhy_checkpoint`, `pinwhy_search`, `pinwhy_batch`), dynamic Skill loading via `capabilities --json`, sandbox policy enforcement, and an embedded read-only canvas across General, Audit, Ultra, and 2.5D views.
    - **Other hosts**: copy the complete `skills/pinwhy/` directory (including `references/`, `methods/`, `agents/`, and `assets/`) into the host's Skill directory and resolve CLI placeholders; do not install another host's hooks.
    - **CLI only**:
      ```sh
@@ -52,15 +53,26 @@ Follow the official setup guide (`skills/pinwhy/references/setup.md`). Do not in
 
 3. Verify: `pinwhy status --cwd "/abs/path/to/project"` and `pinwhy doctor --cwd "/abs/path/to/project"`. Trust the URL reported by `status` (default `http://127.0.0.1:4333`). Remember that installed Skill files do not automatically mean the current session has loaded the Skill — verify in a new session if needed.
 
-## Everyday commands
+## Everyday commands (`pinwhy`)
 
 Always include `--cwd "/abs/path/to/project"` (and `--no-init` on write commands so a typo never creates a stray board; `--agent <id>` for multi-agent work; `--no-truncate` when `capabilities.features.rejectTruncation` is enabled):
 
-- **Restore**: `pinwhy context --budget 4000 --cwd "/abs/path/to/project"`, `pinwhy context --since <checkpoint> --cwd "/abs/path/to/project"`, `pinwhy here --cwd "/abs/path/to/project"`
-- **Record**: `pinwhy node add <type> "title" --detail "…" [--to <id> --rel supports] --cwd "/abs/path/to/project" --no-init`, `pinwhy link <from> <to> --rel <relation> --cwd "/abs/path/to/project" --no-init`, `pinwhy batch --file ops.jsonl --cwd "/abs/path/to/project" --no-init`
+- **Restore**: `pinwhy context --budget 4000 --cwd "/abs/path/to/project"`, `pinwhy context --since <checkpoint> --cwd "/abs/path/to/project"`, `pinwhy here --cwd "/abs/path/to/project"`, `pinwhy digest --cwd "/abs/path/to/project"`
+- **Record**: `pinwhy node add <type> "title" --detail "…" [--to <id> --rel supports] --cwd "/abs/path/to/project" --no-init`, `pinwhy link <from> <to> --rel <relation> --cwd "/abs/path/to/project" --no-init`, `pinwhy batch --file ops.jsonl --request-id <id> --cwd "/abs/path/to/project" --no-init`
 - **Cursor & checkpoint**: `pinwhy cursor <id> --reason "…" --cwd "/abs/path/to/project" --no-init`, `pinwhy checkpoint --summary "…" --cwd "/abs/path/to/project" --no-init`
 - **Inspect**: `pinwhy status --cwd "/abs/path/to/project"`, `pinwhy search --type finding --group-by severity,status --json --cwd "/abs/path/to/project"`, `pinwhy show <id> --cwd "/abs/path/to/project"`
 - **Export & backup**: `pinwhy export --format markdown|mermaid|sarif --cwd "/abs/path/to/project"`, `pinwhy export --out board.html --cwd "/abs/path/to/project"`, `pinwhy backup --out ../pinwhy-backup --cwd "/abs/path/to/project"` (full-board PNG export is also available in the web workspace).
+
+## Coverage & swarm harness (`pinwhy-ultra`, optional)
+
+`pinwhy-ultra` (`bin/pinwhy-ultra.js`) manages deterministic source slicing and enumerated test/review probes in `.pinwhy/ultra/ledger.jsonl` without writing to or modifying `.pinwhy/events.jsonl`:
+
+- **Sync files**: `pinwhy-ultra sync --cwd "/abs/path/to/project" [--compact --json]`
+- **Explicitly exclude out-of-scope assets**: `pinwhy-ultra exclude <target...> --note "<reason>" --cwd "/abs/path/to/project"`
+- **Enumerate / fork probes**: `pinwhy-ultra add "<probe 1>" "<probe 2>" [--sector <sector>] [--at path:line] --cwd "/abs/path/to/project"`
+- **Partition non-overlapping worker batches**: `pinwhy-ultra next --workers 3 --budget-lines 420 --cwd "/abs/path/to/project"`
+- **Record slice/probe completion**: `pinwhy-ultra done <id...> --note "<verification note>" [--refs <nodeIds>] [--depends-on <sliceOrPath>] --cwd "/abs/path/to/project"`
+- **Reconcile commitments & honest boundaries**: `pinwhy-ultra check --cwd "/abs/path/to/project" [--compact --json]` (tracks `breadthComplete`, `commitmentComplete`, and honest open boundaries `allClear`)
 
 ## Docs
 
@@ -68,5 +80,9 @@ Always include `--cwd "/abs/path/to/project"` (and `--no-init` on write commands
 - [Agent setup guide](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy/references/setup.md): host integrations, Skill installation, and service lifecycle
 - [Recording semantics](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy/references/recording.md): node fields, relation directions (`from relation to`), and search
 - [Parallel agents](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy/references/parallel-agents.md): multi-agent identity and handoff
-- [Optional recording methods](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy/methods/INDEX.md): optional `audit`, `inquiry`, `adversarial-review`, and `threat-model` references (and standalone `skills/pinwhy-code-audit/` scenario package)
+- [Optional recording methods](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy/methods/INDEX.md): optional `audit`, `inquiry`, `adversarial-review`, and `threat-model` references
+- [Pinwhy Ultra Skill](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy-ultra/SKILL.md) & [Ultra protocol](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy-ultra/references/protocol.md)
+- [Standalone code audit Skill](https://github.com/Fruit-Guardians/pinwhy/blob/main/skills/pinwhy-code-audit/README.md)
+- [DeepSeek Harness plugin](https://github.com/Fruit-Guardians/pinwhy/blob/main/plugins/dsh-pinwhy/README.md)
+- [Node.js SDK (`pinwhy-core`)](https://github.com/Fruit-Guardians/pinwhy/blob/main/packages/pinwhy-core/README.md)
 - [Documentation index](https://github.com/Fruit-Guardians/pinwhy/blob/main/docs/README.md) & [Engineering principles](https://github.com/Fruit-Guardians/pinwhy/blob/main/AGENT.md)

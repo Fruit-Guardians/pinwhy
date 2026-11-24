@@ -14,6 +14,7 @@ const { Topbar } = await web.load('/src/panels/Topbar.tsx');
 const { AboutPanel } = await web.load('/src/panels/AboutPanel.tsx');
 const { AuditCatalog } = await web.load('/src/workspace/shells/audit/AuditCatalog.tsx');
 const { AuditDossier } = await web.load('/src/workspace/shells/audit/AuditDossier.tsx');
+const { UltraWorkspace } = await web.load('/src/workspace/shells/ultra/UltraWorkspace.tsx');
 const { computeDossierDisplayMeta, premiseLocalBranchKey } = await web.load('/src/workspace/shells/audit/dossier/meta.ts');
 const { buildAuditIndex, changeAuditExpansion, selectAudit } = await web.load('/src/workspace/audit.ts');
 const render = (element) => renderToStaticMarkup(createElement(Tooltip.Provider, null, element));
@@ -379,5 +380,94 @@ test('AuditDossier renders shared 2nd-hop premise local branches once across col
   assert.equal((expandedHtml.match(/aria-label="证据与条件记录详情: p1"/g) || []).length, 1, 'expanded local branch renders once');
   assert.equal((expandedHtml.match(/Local rebuttal on premise · r1/g) || []).length, 1, 'rebuttal card renders once');
   assert.equal((expandedHtml.match(/Local condition on premise · n2/g) || []).length, 1, 'condition card renders once');
+});
+
+test('Topbar keeps unified navigation and workspace preferences synchronized in Ultra mode', () => {
+  const topbarProps = {
+    title: 'Synthetic ultra task',
+    workspace: 'ultra',
+    onWorkspace() {},
+    mode: 'context',
+    onMode() {},
+    ultraLens: 'treemap',
+    onUltraLens() {},
+    ultraPanelOpen: false,
+    onToggleUltraPanel() {},
+    onResetUltraView() {},
+    agentId: 'agent:primary',
+    agentIds: ['agent:primary'],
+    onAgent() {},
+    theme: 'light',
+    onTheme() {},
+    connection: 'live',
+    isStatic: false,
+    sidebarOpen: true,
+    onToggleSidebar() {},
+    onSearch() {},
+    onDigest() {},
+    digestRef: { current: null },
+    activities: [],
+    activityTotal: 0,
+    timelineOpen: false,
+    onSettings() {},
+  };
+
+  const treemapTopbar = render(createElement(Topbar, topbarProps));
+  assert.ok(treemapTopbar.includes('>通用<') && treemapTopbar.includes('>审计<') && treemapTopbar.includes('>Ultra<'));
+  assert.ok(treemapTopbar.includes('星轨弦盘') && treemapTopbar.includes('体量树图') && treemapTopbar.includes('门禁对账'));
+  assert.equal(treemapTopbar.includes('收起导航') || treemapTopbar.includes('展开导航'), false, 'left sidebar toggle stays hidden in Ultra mode');
+  assert.ok(treemapTopbar.includes('展开右侧'), 'right drawer toggle appears in Topbar');
+  assert.ok(treemapTopbar.includes('偏好设置'), 'Preferences remains reachable in Ultra mode');
+  assert.equal(treemapTopbar.includes('重置视角 [0]'), false, 'reset view button only appears in constellation lens');
+
+  const constellationTopbar = render(createElement(Topbar, { ...topbarProps, ultraLens: 'constellation', ultraPanelOpen: true }));
+  assert.ok(constellationTopbar.includes('重置视角 [0]'));
+  assert.ok(constellationTopbar.includes('收起右侧'));
+});
+
+test('UltraWorkspace reflects backdrop, inspectorWidth, showZoomSlider, and checkpoint change indicators', () => {
+  const snapshot = {
+    meta: { title: 'Synthetic ultra board' },
+    nodes: [
+      { id: 'g1', type: 'goal', title: 'Audit target' },
+      { id: 'fd1', type: 'finding', title: 'Candidate finding', severity: 'high', status: 'confirmed', loc: { path: 'src/a.ts', line: 5 } },
+    ],
+    edges: [],
+  };
+  const changes = new Map([['fd1', { kind: 'added', fields: [] }]]);
+
+  const constellationHtml = render(createElement(UltraWorkspace, {
+    snapshot,
+    ultra: null,
+    lens: 'constellation',
+    panelOpen: true,
+    backdrop: 'lines',
+    inspectorWidth: 460,
+    showZoomSlider: true,
+    changes,
+    writable: false,
+    selectedId: null,
+    onSelectNode() {},
+    onInspectFullNode() {},
+    async onReload() {},
+  }));
+  assert.ok(constellationHtml.includes('data-backdrop="lines"'), 'backdrop preference flows to ultra shell');
+  assert.match(constellationHtml, /<aside[^>]*style="[^"]*width:460px/);
+  assert.ok(constellationHtml.includes('data-slot="slider"'), 'zoom slider preference renders in Constellation zoom bar');
+
+  const gapsHtml = render(createElement(UltraWorkspace, {
+    snapshot,
+    ultra: null,
+    lens: 'gaps',
+    backdrop: 'plain',
+    changes,
+    writable: false,
+    selectedId: null,
+    onSelectNode() {},
+    onInspectFullNode() {},
+    async onReload() {},
+  }));
+  assert.ok(gapsHtml.includes('data-backdrop="plain"'));
+  assert.ok(gapsHtml.includes('change-added'), 'checkpoint diff classes apply to Ultra gate nodes');
 });
 

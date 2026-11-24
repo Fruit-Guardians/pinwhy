@@ -2,9 +2,16 @@ import { useMemo } from 'react';
 import { AlertTriangle, ArrowRight, CheckCircle2, FileWarning, GitBranch, MessageSquare, ShieldAlert } from 'lucide-react';
 import { t } from '../../../i18n';
 import type { UltraModel, UltraOrbitalBar } from '../../ultra';
+import type { NodeChange } from '../../use-workspace-presentation';
+
+function nodeChangeClass(changes: ReadonlyMap<string, NodeChange> | null | undefined, id: string): string {
+  const kind = changes?.get(id)?.kind;
+  return kind === 'added' ? ' change-added' : kind === 'updated' ? ' change-updated' : '';
+}
 
 type Props = {
   model: UltraModel;
+  changes?: ReadonlyMap<string, NodeChange> | null;
   onSelectBar: (bar: UltraOrbitalBar) => void;
   onSelectSector: (sector: string) => void;
   onSelectNode: (nodeId: string, sector?: string) => void;
@@ -20,7 +27,7 @@ function formatShallowReason(reason: string | null | undefined, deps?: string[],
   return t('ultra.drawer.reasonInsufficient');
 }
 
-export function UltraGatesView({ model, onSelectBar, onSelectSector, onSelectNode }: Props) {
+export function UltraGatesView({ model, changes = null, onSelectBar, onSelectSector, onSelectNode }: Props) {
   const { gaps, metrics } = model;
 
   const pendingSlices = useMemo(
@@ -32,6 +39,7 @@ export function UltraGatesView({ model, onSelectBar, onSelectSector, onSelectNod
   const c2Count = gaps.shallowSlices.length + gaps.staleSlices.length;
   const c3Count = gaps.unbackedVerdicts.length;
   const s1Count = gaps.awakenedChains.length;
+  const dependencyCycles = gaps.dependencyCycles ?? [];
 
   const mergedS2 = useMemo(() => {
     const byId = new Map<string, { item: (typeof gaps.openThreads)[number]; isHuman: boolean; isOpen: boolean; isAnomaly: boolean }>();
@@ -221,7 +229,7 @@ export function UltraGatesView({ model, onSelectBar, onSelectSector, onSelectNod
                       <button
                         type="button"
                         onClick={() => onSelectNode(item.id, model.nodeDisplaySectorMap.get(item.id) || model.nodeSectorMap.get(item.id))}
-                        className="ultra-row flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                        className={`ultra-row flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs${nodeChangeClass(changes, item.id)}`}
                       >
                         <span className="ultra-mono text-[var(--u-crimson)]">{item.id}</span>
                         <span className="min-w-0 flex-1 truncate text-[var(--u-ink)]">{item.title}</span>
@@ -258,7 +266,7 @@ export function UltraGatesView({ model, onSelectBar, onSelectSector, onSelectNod
                             key={m.nodeId}
                             type="button"
                             onClick={() => onSelectNode(m.nodeId, model.nodeDisplaySectorMap.get(m.nodeId) || model.nodeSectorMap.get(m.nodeId))}
-                            className="ultra-btn h-6 border-[var(--u-amber)]/45 px-2 text-[11px] text-[var(--u-amber)]"
+                            className={`ultra-btn h-6 border-[var(--u-amber)]/45 px-2 text-[11px] text-[var(--u-amber)]${nodeChangeClass(changes, m.nodeId)}`}
                           >
                             <span className="ultra-mono">{m.nodeId}</span>
                             <span className="max-w-[180px] truncate">{m.title}</span>
@@ -272,7 +280,7 @@ export function UltraGatesView({ model, onSelectBar, onSelectSector, onSelectNod
                         <button
                           type="button"
                           onClick={() => onSelectNode(chain.hypothesis.id, model.nodeDisplaySectorMap.get(chain.hypothesis.id) || model.nodeSectorMap.get(chain.hypothesis.id))}
-                          className="ultra-btn h-6 border-[var(--u-mint)]/45 px-2 text-[11px] text-[var(--u-ink)]"
+                          className={`ultra-btn h-6 border-[var(--u-mint)]/45 px-2 text-[11px] text-[var(--u-ink)]${nodeChangeClass(changes, chain.hypothesis.id)}`}
                         >
                           <span className="ultra-mono text-[var(--u-amber)]">{chain.hypothesis.id}</span>
                           <span className="max-w-[220px] truncate">{chain.hypothesis.title}</span>
@@ -301,7 +309,7 @@ export function UltraGatesView({ model, onSelectBar, onSelectSector, onSelectNod
                       <button
                         type="button"
                         onClick={() => onSelectNode(item.id, model.nodeDisplaySectorMap.get(item.id) || model.nodeSectorMap.get(item.id))}
-                        className="ultra-row flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                        className={`ultra-row flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs${nodeChangeClass(changes, item.id)}`}
                       >
                         {isHuman && (
                           <span className="ultra-mono rounded border border-[var(--u-cyan)]/45 bg-[var(--u-cyan)]/10 px-1 py-0.2 text-[10px] text-[var(--u-cyan)]">HUMAN</span>
@@ -321,6 +329,49 @@ export function UltraGatesView({ model, onSelectBar, onSelectSector, onSelectNod
               )}
             </section>
           </div>
+          {dependencyCycles.length > 0 && (
+            <section className="rounded-lg border border-[var(--u-amber)]/35 bg-[var(--u-surface)] p-4">
+              <div className="flex items-center justify-between border-b border-[var(--u-line-soft)] pb-2.5">
+                <div className="flex items-center gap-2 text-xs font-medium text-[var(--u-ink)]">
+                  <GitBranch className="size-3.5 text-[var(--u-amber)]" />
+                  <span>{t('ultra.gate.cycles')}</span>
+                </div>
+                {signalBadge(dependencyCycles.length, 'amber')}
+              </div>
+              <ul className="mt-2.5 mb-0 list-none space-y-2 p-0">
+                {dependencyCycles.map((cyc) => (
+                  <li key={cyc.cycle.join('->')} className="rounded border border-[var(--u-line-soft)] bg-[var(--u-raise)] p-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {cyc.sliceIds.map((id) => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => jumpToSlice(id, model.sliceDisplaySectorMap.get(id) || model.sliceSectorMap.get(id) || '')}
+                            className="ultra-btn ultra-mono h-6 border-[var(--u-amber)]/45 px-2 text-[11px] text-[var(--u-amber)]"
+                          >
+                            {id}
+                          </button>
+                        ))}
+                        <span className="ultra-mono text-[11px] text-[var(--u-ink-2)]">{cyc.cycle.join(' → ')}</span>
+                      </div>
+                      <span
+                        className="ultra-mono text-[10.5px]"
+                        style={{ color: cyc.resolved ? 'var(--u-mint)' : 'var(--u-amber)' }}
+                      >
+                        {cyc.resolved ? t('ultra.gate.cycleResolved') : t('ultra.gate.cycleUnresolved')}
+                      </span>
+                    </div>
+                    {cyc.breakHint && (
+                      <div className="ultra-mono mt-1.5 text-[10.5px] text-[var(--u-dim)] [overflow-wrap:anywhere]">
+                        {cyc.breakHint}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
       </div>
     </div>

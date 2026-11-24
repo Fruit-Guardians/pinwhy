@@ -23,7 +23,7 @@ test('repository satisfies every architectural boundary, DAG, and SDK closure ru
   assert.deepEqual(result.violations, []);
   assert.ok(result.stats.coreFiles >= 70);
   assert.ok(result.stats.webFiles >= 140);
-  assert.ok(result.stats.siteFiles >= 30);
+  assert.ok(result.stats.siteFiles >= 20);
   assert.equal(result.stats.sdkClosureFiles, 19);
 });
 

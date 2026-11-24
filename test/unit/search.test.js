@@ -6,7 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { emptyGraph } from '../../lib/domain/model.js';
-import { searchGraph } from '../../lib/queries/search.js';
+import { parseTypes, searchGraph } from '../../lib/queries/search.js';
 
 function graph() {
   const g = emptyGraph();
@@ -151,5 +151,83 @@ test('CLI list limits and filters records without writing', (t) => {
   const conflict = run('ls', '--all', '--limit', '1', '--json');
   assert.equal(conflict.status, 1);
   assert.equal(conflict.stdout, '');
+  assert.equal(fs.readFileSync(file, 'utf8'), log);
+});
+
+test('searchGraph and parseTypes support comma-separated/array types and reject empty segments', () => {
+  const g = graph();
+  assert.deepEqual(parseTypes([' observation , hypothesis ', 'observation', 'experiment']), ['observation', 'hypothesis', 'experiment']);
+  assert.deepEqual(
+    searchGraph(g, { type: 'observation,hypothesis,experiment' }).items.map((x) => x.id),
+    ['o1', 'x1', 'hy1'],
+  );
+  assert.deepEqual(
+    searchGraph(g, { type: ['observation', 'experiment'] }).items.map((x) => x.id),
+    ['o1', 'x1'],
+  );
+  assert.deepEqual(
+    searchGraph(g, { type: ' observation , hypothesis ', tags: ['auth'] }).items.map((x) => x.id),
+    ['o1', 'hy1'],
+  );
+
+  for (const invalid of ['', ',', 'finding,,vuln', 'finding, ', ['vuln', '']]) {
+    assert.throws(() => parseTypes(invalid), { code: 'invalid_value' });
+    assert.throws(() => searchGraph(g, { type: invalid }), { code: 'invalid_value' });
+    assert.throws(() => searchGraph(emptyGraph(), { type: invalid }), { code: 'invalid_value' });
+  }
+});
+
+test('CLI search, ls, and export accept comma-separated/repeated --type and fail cleanly on malformed --type', (t) => {
+  const { run, file, log } = cliFixture(t);
+
+  const searchComma = run('search', '--type', 'vuln,fact', '--group-by', 'status', '--limit', '100', '--json');
+  assert.equal(searchComma.status, 0, searchComma.stderr);
+  const commaRes = JSON.parse(searchComma.stdout);
+  assert.equal(commaRes.total, 35);
+  assert.deepEqual(commaRes.groups, [
+    { values: { status: 'open' }, count: 2 },
+    { values: { status: 'refuted' }, count: 1 },
+    { values: { status: null }, count: 32 },
+  ]);
+
+  const searchRepeat = run('search', '--type', 'vuln', '--type', 'fact', '--limit', '100', '--json');
+  assert.equal(searchRepeat.status, 0, searchRepeat.stderr);
+  assert.equal(JSON.parse(searchRepeat.stdout).total, 35);
+
+  const lsComma = run('ls', '--all', '--type', 'vuln,fact', '--json');
+  assert.equal(lsComma.status, 0, lsComma.stderr);
+  assert.equal(JSON.parse(lsComma.stdout).length, 35);
+
+  const lsShort = run('ls', '--all', '-t', 'vuln,fact', '--json');
+  assert.equal(lsShort.status, 0, lsShort.stderr);
+  assert.equal(JSON.parse(lsShort.stdout).length, 35);
+
+  const outFile = path.join(path.dirname(path.dirname(file)), 'multi-type.md');
+  const exportRes = run('export', '--format', 'markdown', '--type', 'vuln,fact', '--out', outFile, '--json');
+  assert.equal(exportRes.status, 0, exportRes.stderr);
+  const exported = fs.readFileSync(outFile, 'utf8');
+  assert.match(exported, /Selected nodes: 35/);
+  assert.match(exported, /Cookie scope/);
+  assert.match(exported, /Observation 30/);
+
+  const uninitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinwhy-uninit-type-'));
+  t.after(() => fs.rmSync(uninitDir, { recursive: true, force: true }));
+  const cli = fileURLToPath(new URL('../../bin/pinwhy.js', import.meta.url));
+  for (const args of [
+    ['search', '--type', 'finding,,vuln', '--json'],
+    ['ls', '--type', ',', '--json'],
+  ]) {
+    const badInit = run(...args);
+    assert.equal(badInit.status, 1);
+    assert.equal(badInit.stdout, '');
+    assert.equal(JSON.parse(badInit.stderr).code, 'invalid_value');
+
+    const badUninit = spawnSync(process.execPath, [cli, ...args, '--cwd', uninitDir], { cwd: uninitDir, encoding: 'utf8' });
+    assert.equal(badUninit.status, 1);
+    assert.equal(badUninit.stdout, '');
+    assert.equal(JSON.parse(badUninit.stderr).code, 'invalid_value');
+    assert.deepEqual(fs.readdirSync(uninitDir), []);
+  }
+
   assert.equal(fs.readFileSync(file, 'utf8'), log);
 });

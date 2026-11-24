@@ -63,8 +63,24 @@ export function DependencyMicroGraph({
         <span className="ultra-mono text-[10.5px] uppercase tracking-wider text-[var(--u-dim)]">
           {t('ultra.micrograph.title')} · {center.id}
         </span>
-        <span className="ultra-mono text-[10.5px]" style={{ color: hasDeps ? 'var(--u-mint)' : 'var(--u-dim)' }}>
-          {hasDeps ? t('ultra.micrograph.verified') : t('ultra.micrograph.none')}
+        <span
+          className="ultra-mono text-[10.5px]"
+          style={{
+            color:
+              center.slice?.dependencyCycle?.length || center.slice?.unverifiedDependencies?.length
+                ? 'var(--u-amber)'
+                : hasDeps
+                  ? 'var(--u-mint)'
+                  : 'var(--u-dim)',
+          }}
+        >
+          {center.slice?.dependencyCycle?.length
+            ? t('ultra.micrograph.cycle')
+            : center.slice?.unverifiedDependencies?.length
+              ? t('ultra.micrograph.unverified')
+              : hasDeps
+                ? t('ultra.micrograph.verified')
+                : t('ultra.micrograph.none')}
         </span>
       </div>
 

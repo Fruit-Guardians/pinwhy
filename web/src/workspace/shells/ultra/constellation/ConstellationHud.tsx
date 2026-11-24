@@ -1,4 +1,5 @@
 import { LocateFixed, Minus, MousePointer, Plus, ZoomIn } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 import { t } from '../../../../i18n';
 import type { UltraFilter, UltraModel } from '../../../ultra';
 import type { HoverTip } from './geometry';
@@ -115,15 +116,19 @@ export function ConstellationTopHud({
 export function ConstellationZoomBar({
   zoomPct,
   wheelMode,
+  showZoomSlider = false,
   onZoomIn,
   onZoomOut,
+  onZoomToPct,
   onFit,
   onToggleWheelMode,
 }: {
   zoomPct: number;
   wheelMode: 'pan' | 'zoom';
+  showZoomSlider?: boolean;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onZoomToPct?: (pct: number) => void;
   onFit: () => void;
   onToggleWheelMode: () => void;
 }) {
@@ -138,6 +143,17 @@ export function ConstellationZoomBar({
         >
           <Minus className="size-3.5" />
         </button>
+        {showZoomSlider && (
+          <Slider
+            aria-label={t('settings.showZoomSlider')}
+            min={45}
+            max={450}
+            step={5}
+            value={[zoomPct]}
+            onValueChange={(next) => onZoomToPct?.(next[0])}
+            className="w-24 px-1 max-sm:hidden"
+          />
+        )}
         <span className="ultra-mono min-w-[44px] text-center text-[11px] text-[var(--u-ink-2)]">{zoomPct}%</span>
         <button
           type="button"

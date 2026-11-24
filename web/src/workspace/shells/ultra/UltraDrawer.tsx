@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { PanelRightClose } from 'lucide-react';
 import { t } from '../../../i18n';
+import { INSPECTOR_WIDTH_RANGE } from '../../../preferences';
 import type { BoardNode, UltraSlice } from '../../../types';
 import type { UltraModel, UltraOrbitalBar, UltraSectorView } from '../../ultra';
+import type { NodeChange } from '../../use-workspace-presentation';
 import {
   NodeDrawerView,
   OverviewDrawerView,
@@ -12,12 +14,15 @@ import {
 
 type Props = {
   open: boolean;
+  width?: number;
+  onWidthChange?: (width: number) => void;
   viewMode: 'slice' | 'sector' | 'node' | 'overview';
   preferMicroGraph?: boolean;
   sector: UltraSectorView | null;
   selectedBar: UltraOrbitalBar | null;
   selectedNode: BoardNode | null;
   model: UltraModel;
+  changes?: ReadonlyMap<string, NodeChange> | null;
   writable: boolean;
   onToggleCollapse?: () => void;
   onBackToSector: (sectorName: string) => void;
@@ -30,12 +35,15 @@ type Props = {
 
 export function UltraDrawer({
   open,
+  width = INSPECTOR_WIDTH_RANGE.default,
+  onWidthChange,
   viewMode,
   preferMicroGraph = false,
   sector,
   selectedBar,
   selectedNode,
   model,
+  changes = null,
   writable,
   onToggleCollapse,
   onBackToSector,
@@ -45,7 +53,6 @@ export function UltraDrawer({
   onInspectFullNode,
   onReload,
 }: Props) {
-  const [drawerWidth, setDrawerWidth] = useState(388);
   const [resizing, setResizing] = useState(false);
   const [copiedLoc, setCopiedLoc] = useState<string | null>(null);
   const resizeOriginRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -55,8 +62,8 @@ export function UltraDrawer({
     const onPointerMove = (event: PointerEvent) => {
       const origin = resizeOriginRef.current;
       if (!origin) return;
-      const next = Math.min(520, Math.max(340, origin.startWidth + (origin.startX - event.clientX)));
-      setDrawerWidth(next);
+      const next = Math.min(INSPECTOR_WIDTH_RANGE.max, Math.max(INSPECTOR_WIDTH_RANGE.min, Math.round(origin.startWidth + (origin.startX - event.clientX))));
+      onWidthChange?.(next);
     };
     const stop = () => {
       setResizing(false);
@@ -70,7 +77,7 @@ export function UltraDrawer({
       window.removeEventListener('pointerup', stop);
       window.removeEventListener('pointercancel', stop);
     };
-  }, [resizing]);
+  }, [resizing, onWidthChange]);
 
   if (!open) return null;
 
@@ -100,14 +107,14 @@ export function UltraDrawer({
         data-dragging={resizing ? 'true' : undefined}
         onPointerDown={(event) => {
           event.preventDefault();
-          resizeOriginRef.current = { startX: event.clientX, startWidth: drawerWidth };
+          resizeOriginRef.current = { startX: event.clientX, startWidth: width };
           setResizing(true);
         }}
         className="ultra-resize-handle max-lg:hidden"
       />
       <aside
         aria-label={t('ultra.inspector.panelTitle')}
-        style={{ width: drawerWidth }}
+        style={{ width }}
         className="flex h-full shrink-0 flex-col border-l border-[var(--u-line)] bg-[var(--u-surface)] max-lg:!w-[340px]"
       >
         <div className="flex h-10 shrink-0 items-center justify-between border-b border-[var(--u-line)] px-4">
@@ -131,6 +138,7 @@ export function UltraDrawer({
               <NodeDrawerView
                 node={selectedNode}
                 model={model}
+                changes={changes}
                 sector={sector}
                 selectedBar={selectedBar}
                 writable={writable}
@@ -144,6 +152,7 @@ export function UltraDrawer({
               <SliceDrawerView
                 bar={selectedBar}
                 model={model}
+                changes={changes}
                 preferMicroGraph={preferMicroGraph}
                 copiedLoc={copiedLoc}
                 writable={writable}
@@ -157,6 +166,7 @@ export function UltraDrawer({
               <SectorDrawerView
                 sector={sector}
                 model={model}
+                changes={changes}
                 sectorSlices={sectorSlices}
                 sectorNodes={sectorNodes}
                 writable={writable}
@@ -165,7 +175,7 @@ export function UltraDrawer({
                 onReload={onReload}
               />
             ) : (
-              <OverviewDrawerView model={model} onSelectBar={onSelectBar} />
+              <OverviewDrawerView model={model} changes={changes} onSelectBar={onSelectBar} />
             )}
           </div>
         </div>

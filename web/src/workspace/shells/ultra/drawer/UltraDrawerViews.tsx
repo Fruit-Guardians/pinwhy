@@ -1,8 +1,9 @@
 import { type ReactNode } from 'react';
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight, Check, ChevronRight, Copy, ExternalLink } from 'lucide-react';
+import { SeverityBadge } from '../../../../SeverityBadge';
 import { formatTime, relationLabel, typeLabel } from '../../../../canvas/graph';
 import { t } from '../../../../i18n';
-import { confidenceLabel, severityLabel, statusLabel } from '../../../../presentation';
+import { confidenceLabel, statusLabel } from '../../../../presentation';
 import { sourceLocation } from '../../../../research-state';
 import type { BoardNode, UltraSlice } from '../../../../types';
 import {
@@ -12,8 +13,14 @@ import {
   type UltraOrbitalBar,
   type UltraSectorView,
 } from '../../../ultra';
+import type { NodeChange } from '../../../use-workspace-presentation';
 import { DependencyMicroGraph } from './DependencyMicroGraph';
 import { HumanInjectionForm } from './HumanInjectionForm';
+
+function nodeChangeClass(changes: ReadonlyMap<string, NodeChange> | null | undefined, id: string): string {
+  const kind = changes?.get(id)?.kind;
+  return kind === 'added' ? ' change-added' : kind === 'updated' ? ' change-updated' : '';
+}
 
 const SLICE_DOT_TONE: Record<string, string> = {
   pending: 'border-[var(--u-tick)] bg-transparent',
@@ -58,6 +65,7 @@ function shallowReasonText(reason: string | null | undefined, unverifiedDeps?: s
 export function SliceDrawerView({
   bar,
   model,
+  changes,
   preferMicroGraph,
   copiedLoc,
   writable,
@@ -69,6 +77,7 @@ export function SliceDrawerView({
 }: {
   bar: UltraOrbitalBar;
   model: UltraModel;
+  changes?: ReadonlyMap<string, NodeChange> | null;
   preferMicroGraph: boolean;
   copiedLoc: string | null;
   writable: boolean;
@@ -167,6 +176,12 @@ export function SliceDrawerView({
             {t('ultra.drawer.shallowReason')}: {shallowReasonText(slice.shallowReason, slice.unverifiedDependencies, slice.humanFollowups)}
           </p>
         )}
+        {slice?.dependencyCycle?.length ? (
+          <div className="mt-2 rounded border border-[var(--u-amber)]/35 bg-[var(--u-amber)]/10 px-2 py-1.5 text-[11px] text-[var(--u-amber)]">
+            <div className="ultra-mono font-medium">{t('ultra.drawer.cycleNotice', { cycle: slice.dependencyCycle.join(' → ') })}</div>
+            <div className="mt-0.5 text-[10.5px] text-[var(--u-ink-2)]">{t('ultra.drawer.cycleBreakHint')}</div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-3 rounded-lg border border-[var(--u-line)] bg-[var(--u-surface)] p-3">
@@ -182,7 +197,7 @@ export function SliceDrawerView({
                 <button
                   type="button"
                   onClick={() => onSelectNode(node.id, bar.sector)}
-                  className="flex w-full items-start gap-2 rounded border border-[var(--u-line-soft)] bg-[var(--u-raise)] px-2.5 py-2 text-left transition-colors hover:border-[var(--u-tick)]"
+                  className={`flex w-full items-start gap-2 rounded border border-[var(--u-line-soft)] bg-[var(--u-raise)] px-2.5 py-2 text-left transition-colors hover:border-[var(--u-tick)]${nodeChangeClass(changes, node.id)}`}
                 >
                   <span className="ultra-mono shrink-0 text-[11px]" style={{ color: ['finding', 'vuln'].includes(node.type) ? 'var(--u-crimson)' : 'var(--u-cyan)' }}>
                     {node.id}
@@ -211,6 +226,7 @@ export function SliceDrawerView({
 export function NodeDrawerView({
   node,
   model,
+  changes,
   sector,
   selectedBar,
   writable,
@@ -222,6 +238,7 @@ export function NodeDrawerView({
 }: {
   node: BoardNode;
   model: UltraModel;
+  changes?: ReadonlyMap<string, NodeChange> | null;
   sector: UltraSectorView | null;
   selectedBar: UltraOrbitalBar | null;
   writable: boolean;
@@ -269,20 +286,18 @@ export function NodeDrawerView({
         </button>
       </div>
 
-      <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-        <span className="ultra-mono rounded border border-[var(--u-cyan)]/40 bg-[var(--u-cyan)]/10 px-1.5 py-0.5 text-[var(--u-cyan)]">{node.id}</span>
-        <span className="rounded border border-[var(--u-line)] px-1.5 py-0.5 text-[var(--u-ink)]">{typeLabel(node.type)}</span>
-        {node.status && <span className="rounded border border-[var(--u-line)] px-1.5 py-0.5 text-[var(--u-dim)]">{statusLabel(node.status)}</span>}
-        {node.severity && (
-          <span className="rounded border border-[var(--u-crimson)]/45 bg-[var(--u-crimson)]/10 px-1.5 py-0.5 text-[var(--u-crimson)]">
-            {severityLabel(node.severity)}
-          </span>
-        )}
-        {node.confidence && <span className="rounded border border-[var(--u-line)] px-1.5 py-0.5 text-[var(--u-amber)]">{confidenceLabel(node.confidence)}</span>}
-        {isHuman && <span className="ultra-mono rounded border border-[var(--u-cyan)]/45 bg-[var(--u-cyan)]/10 px-1.5 py-0.5 text-[10px] text-[var(--u-cyan)]">HUMAN</span>}
-      </div>
+      <div className={`rounded-md${nodeChangeClass(changes, node.id)}`}>
+        <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span className="ultra-mono rounded border border-[var(--u-cyan)]/40 bg-[var(--u-cyan)]/10 px-1.5 py-0.5 text-[var(--u-cyan)]">{node.id}</span>
+          <span className="rounded border border-[var(--u-line)] px-1.5 py-0.5 text-[var(--u-ink)]">{typeLabel(node.type)}</span>
+          {node.status && <span className="rounded border border-[var(--u-line)] px-1.5 py-0.5 text-[var(--u-dim)]">{statusLabel(node.status)}</span>}
+          {node.severity && <SeverityBadge severity={node.severity} />}
+          {node.confidence && <span className="rounded border border-[var(--u-line)] px-1.5 py-0.5 text-[var(--u-amber)]">{confidenceLabel(node.confidence)}</span>}
+          {isHuman && <span className="ultra-mono rounded border border-[var(--u-cyan)]/45 bg-[var(--u-cyan)]/10 px-1.5 py-0.5 text-[10px] text-[var(--u-cyan)]">HUMAN</span>}
+        </div>
 
-      <h2 className="m-0 text-[15px] font-medium leading-snug text-[var(--u-ink)]">{node.title}</h2>
+        <h2 className="m-0 text-[15px] font-medium leading-snug text-[var(--u-ink)]">{node.title}</h2>
+      </div>
 
       <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-[var(--u-line)] pt-3 text-xs">
         <div>
@@ -355,6 +370,7 @@ export function NodeDrawerView({
 export function SectorDrawerView({
   sector,
   model,
+  changes,
   sectorSlices,
   sectorNodes,
   writable,
@@ -364,6 +380,7 @@ export function SectorDrawerView({
 }: {
   sector: UltraSectorView;
   model: UltraModel;
+  changes?: ReadonlyMap<string, NodeChange> | null;
   sectorSlices: UltraSlice[];
   sectorNodes: BoardNode[];
   writable: boolean;
@@ -463,7 +480,7 @@ export function SectorDrawerView({
           <div className="ultra-section-title mb-2">{t('ultra.drawer.nodes')} ({sectorNodes.length})</div>
           <ul className="m-0 list-none p-0">
             {sectorNodes.map((node) => (
-              <li key={node.id} className="ultra-row py-2">
+              <li key={node.id} className={`ultra-row py-2${nodeChangeClass(changes, node.id)}`}>
                 <button
                   type="button"
                   onClick={() => onSelectNode(node.id, sector.sector)}
@@ -486,11 +503,20 @@ export function SectorDrawerView({
 
 export function OverviewDrawerView({
   model,
+  changes,
   onSelectBar,
 }: {
   model: UltraModel;
+  changes?: ReadonlyMap<string, NodeChange> | null;
   onSelectBar: (bar: UltraOrbitalBar) => void;
 }) {
+  const barNodeChange = (bar: UltraOrbitalBar) => {
+    for (const id of bar.nodeIds) {
+      const cls = nodeChangeClass(changes, id);
+      if (cls) return cls;
+    }
+    return '';
+  };
   const zeroNodeSamples = model.bars
     .filter((b) => b.status === 'cleared' && b.nodeIds.length === 0 && !(b.slice?.humanFollowups?.length))
     .slice(0, 7);
@@ -537,7 +563,7 @@ export function OverviewDrawerView({
                 <button
                   type="button"
                   onClick={() => onSelectBar(bar)}
-                  className="ultra-row flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left"
+                  className={`ultra-row flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left${barNodeChange(bar)}`}
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <span

@@ -15,8 +15,8 @@ export const SITE_ROUTES = Object.freeze([
     ogLocale: 'zh_CN',
     image: '/og-zh.png',
     selector: '#hero-title',
-    title: 'Pinwhy — Agent 的外置记忆与可视化工作台',
-    desc: 'Pinwhy 是与宿主无关的 Agent 外置记忆与可视化工作台。把关键判断、正反证据、显式关系与当前位置写进项目本地，跨会话按预算读回现场。',
+    title: 'Pinwhy — 面向 AI Agent 的本地状态记录工具与可视化工作台',
+    desc: 'Pinwhy 将目标、假设、正反证据、有向关系与检查点写入项目本地 .pinwhy/events.jsonl。Agent 按预算读回上下文，开发者在通用、审计与 Ultra 三视图工作台中核对依据与进展。',
   }),
   Object.freeze({
     key: 'en',
@@ -28,8 +28,8 @@ export const SITE_ROUTES = Object.freeze([
     ogLocale: 'en_US',
     image: '/og-en.png',
     selector: '#hero-title',
-    title: 'Pinwhy — External memory and a visual workspace for AI agents',
-    desc: 'Pinwhy is a host-agnostic external memory and visual workspace for AI agents. Keep judgments, evidence, explicit relations, and cursors in your project, and read them back within budget across sessions.',
+    title: 'Pinwhy — Local state recorder and visual workspace for AI agents',
+    desc: 'Pinwhy writes goals, hypotheses, evidence, explicit relations, and checkpoints to project-local .pinwhy/events.jsonl. Restore context within token budget and review across General, Audit, and Ultra views.',
   }),
   Object.freeze({
     key: 'zh_sec',
@@ -41,8 +41,8 @@ export const SITE_ROUTES = Object.freeze([
     ogLocale: 'zh_CN',
     image: '/og-zh.png',
     selector: '#sec-hero-title',
-    title: '安全研究与代码审计 — Pinwhy',
-    desc: '同一份黑板的审计阅读视图：议题目录、三维候选态势矩阵、双翼辩证卷宗与可切换论证图，支持多方溯源与 SARIF 2.1.0 导出。',
+    title: '安全审计与 Ultra 覆盖 — Pinwhy',
+    desc: '同一项目下的审计辩证卷宗与 pinwhy-ultra 文件切片覆盖视图：议题目录、三维态势矩阵、正反依据对照、星轨与门禁对账，支持 SARIF 2.1.0 与离线导出。',
   }),
   Object.freeze({
     key: 'en_sec',
@@ -54,8 +54,8 @@ export const SITE_ROUTES = Object.freeze([
     ogLocale: 'en_US',
     image: '/og-en.png',
     selector: '#sec-hero-title',
-    title: 'Security Research & Code Audit — Pinwhy',
-    desc: 'A dedicated reading mode over the same board: issue outline, orthogonal candidate matrix, two-wing dialectical dossier, argument graph, and SARIF 2.1.0 export.',
+    title: 'Security Audit & Ultra Coverage — Pinwhy',
+    desc: 'Structured security review across Audit dossiers and pinwhy-ultra slice coverage: issue outline, orthogonal matrix, support vs counterevidence wings, constellation & gate audit, and SARIF 2.1.0 export.',
   }),
   Object.freeze({
     key: 'zh_dsh',
@@ -67,8 +67,8 @@ export const SITE_ROUTES = Object.freeze([
     ogLocale: 'zh_CN',
     image: '/og-zh.png',
     selector: '#dsh-hero-title',
-    title: 'DeepSeek Harness 原生适配器 — Pinwhy',
-    desc: '通过 plugins/dsh-pinwhy 在 DeepSeek Harness 内提供 11 个结构化原生工具与内嵌画板，调用独立 Pinwhy CLI，随宿主生命周期回收临时服务。',
+    title: 'DeepSeek Harness 原生插件 — Pinwhy',
+    desc: '通过 plugins/dsh-pinwhy 在 DeepSeek Harness 内提供 11 个原生工具、动态 Skill 加载与只读内嵌工作台（支持通用、审计、Ultra 与 2.5D 视图），通过公开契约调用独立 CLI。',
   }),
   Object.freeze({
     key: 'en_dsh',
@@ -80,8 +80,8 @@ export const SITE_ROUTES = Object.freeze([
     ogLocale: 'en_US',
     image: '/og-en.png',
     selector: '#dsh-hero-title',
-    title: 'DeepSeek Harness Native Adapter — Pinwhy',
-    desc: 'Connect DeepSeek Harness to your installed Pinwhy CLI with 11 typed native tools, sandbox path validation, and an embedded canvas via plugins/dsh-pinwhy.',
+    title: 'DeepSeek Harness Native Plugin — Pinwhy',
+    desc: 'Connect DeepSeek Harness to your standalone Pinwhy CLI with 11 typed tools, dynamic Skill loading, sandbox path checks, and an embedded canvas across General, Audit, Ultra, and 2.5D views.',
   }),
 ]);
 

@@ -1,30 +1,11 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { execFileSync } from 'node:child_process';
+import { openWebModules } from '../helpers/load-web-module.mjs';
 
-// Compile the same portable Node 18+ pattern the viewer tests use, so the endpoint
-// helper and the graph controller run without a browser or a bundler.
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinwhy-viewer-endpoints-'));
-after(() => fs.rmSync(dir, { recursive: true, force: true }));
-const root = fileURLToPath(new URL('../../', import.meta.url));
-execFileSync(process.execPath, [path.join(root, 'node_modules/typescript/bin/tsc'),
-  '--target', 'ES2022', '--module', 'ESNext', '--moduleResolution', 'Bundler', '--skipLibCheck', '--outDir', dir,
-  path.join(root, 'web/src/api/endpoint.ts'), path.join(root, 'web/src/api/graph-stream.ts')], { cwd: dir });
-function resolveModuleExtensions(directory) {
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const p = path.join(directory, entry.name);
-    if (entry.isDirectory()) resolveModuleExtensions(p);
-    else if (entry.name.endsWith('.js')) fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace(/from '(\.\.?\/[^']+)'/g, (_all, name) => `from '${name}.js'`));
-  }
-}
-resolveModuleExtensions(dir);
-fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ type: 'module' }));
-const { endpoint } = await import(pathToFileURL(path.join(dir, 'api/endpoint.js')).href);
-const { createGraphSubscription } = await import(pathToFileURL(path.join(dir, 'api/graph-stream.js')).href);
+const web = await openWebModules();
+after(() => web.close());
+const { endpoint } = await web.load('/src/api/endpoint.ts');
+const { createGraphSubscription } = await web.load('/src/api/graph-stream.ts');
 
 const PREFIX = 'http://127.0.0.1:4333/pinwhy-viewer/synthetic-token/';
 

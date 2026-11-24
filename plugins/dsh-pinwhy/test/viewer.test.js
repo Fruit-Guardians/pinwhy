@@ -129,6 +129,9 @@ test('Web viewer proxy requires Host authentication, remains read-only and honor
   const response = await fetch(endpoint('api/graph'), { headers });
   assert.equal(response.status, 200);
   assert.notEqual((await response.json()).meta.writable, true);
+  const ultra = await fetch(endpoint('api/ultra'), { headers });
+  assert.equal(ultra.status, 200);
+  assert.equal((await ultra.json()).schema, 'pinwhy.ultra.v1');
   assert.equal((await fetch(endpoint('api/nodes'), { method: 'POST', headers })).status, 405);
   config = normalizeConfig({ runtimeCli: cli, projects: [], autoDiscover: false });
   assert.equal((await fetch(endpoint('api/graph'), { headers })).status, 403);

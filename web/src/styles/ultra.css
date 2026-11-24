@@ -1,136 +1,54 @@
-/* ---- Pinwhy Ultra: Dual Obsidian Constellation & Carbon Treemap Skins ---- */
+/* ---- Pinwhy Ultra: Theme- & Palette-Synchronized Tokens ---- */
 .ultra-shell {
-  --u-bg: #0b0c10;
-  --u-surface: #12141b;
-  --u-raise: #181b24;
-  --u-raise-2: #1f2431;
-  --u-line: #252936;
-  --u-line-soft: #1a1e29;
-  --u-tick: #2c3345;
-  --u-ink: #f3f4f6;
-  --u-ink-2: #cbd5e1;
-  --u-dim: #8b94a8;
-  --u-mint: #34d399;
-  --u-cleared-zero: #10b981;
-  --u-amber: #fbbf24;
-  --u-crimson: #fb7185;
-  --u-cyan: #38bdf8;
-  --u-dot-grid: #1e2331;
-  --u-ring-track: #1b2030;
-  --u-ring-hover: #f8fafc;
-  --u-hub-void: rgba(15, 17, 24, 0.72);
-  --u-stage-glow: rgba(56, 189, 248, 0.055);
-  --u-glass: rgba(18, 20, 27, 0.88);
-  --u-shadow-glass: 0 8px 24px rgba(0, 0, 0, 0.35);
-  --u-shadow-tip: 0 14px 36px rgba(0, 0, 0, 0.55);
-  --u-sector-hit-fill: rgba(251, 113, 133, 0.28);
-  --u-sector-ok-fill: rgba(52, 211, 153, 0.26);
-  --u-sat-halo: rgba(52, 211, 153, 0.22);
-  --u-tile-ok-bg: rgba(16, 185, 129, 0.10);
-  --u-tile-ok-bd: rgba(52, 211, 153, 0.34);
-  --u-tile-ok-strong-bg: rgba(52, 211, 153, 0.14);
-  --u-tile-ok-strong-bd: rgba(52, 211, 153, 0.5);
-  --u-tile-hit-bg: rgba(251, 113, 133, 0.13);
-  --u-tile-hit-bd: rgba(251, 113, 133, 0.48);
-  --u-tile-warn-bg: rgba(251, 191, 36, 0.12);
-  --u-tile-warn-bd: rgba(251, 191, 36, 0.46);
-  --u-tile-pend-bg: #151519;
-  --u-tile-pend-bd: #27272a;
-  --u-stripe: rgba(255, 255, 255, 0.025);
-  --u-sel-ring: rgba(250, 250, 250, 0.4);
+  --u-bg: var(--bg);
+  --u-surface: var(--surface);
+  --u-raise: var(--surface-2);
+  --u-raise-2: var(--surface-3);
+  --u-line: var(--line);
+  --u-line-soft: color-mix(in srgb, var(--line) 72%, var(--surface));
+  --u-tick: var(--line-strong);
+  --u-ink: var(--ink);
+  --u-ink-2: var(--ink-2);
+  --u-dim: var(--ink-3);
+  --u-mint: var(--live);
+  --u-cleared-zero: color-mix(in srgb, var(--live) 82%, var(--surface));
+  --u-amber: var(--severity-medium);
+  --u-crimson: var(--danger);
+  --u-cyan: var(--node-fact);
+  --u-dot-grid: var(--line-strong);
+  --u-ring-track: var(--surface-3);
+  --u-ring-hover: var(--ink);
+  --u-hub-void: color-mix(in srgb, var(--surface) 86%, transparent);
+  --u-stage-glow: color-mix(in srgb, var(--live) 6%, transparent);
+  --u-glass: color-mix(in srgb, var(--surface) 90%, transparent);
+  --u-shadow-glass: var(--shadow-float);
+  --u-shadow-tip: var(--shadow-card-hover);
+  --u-sector-hit-fill: color-mix(in srgb, var(--danger) 20%, transparent);
+  --u-sector-ok-fill: color-mix(in srgb, var(--live) 20%, transparent);
+  --u-sat-halo: color-mix(in srgb, var(--live) 22%, transparent);
+  --u-tile-ok-bg: color-mix(in srgb, var(--live) 9%, var(--surface));
+  --u-tile-ok-bd: color-mix(in srgb, var(--live) 34%, var(--line));
+  --u-tile-ok-strong-bg: color-mix(in srgb, var(--live) 15%, var(--surface));
+  --u-tile-ok-strong-bd: color-mix(in srgb, var(--live) 48%, var(--line));
+  --u-tile-hit-bg: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  --u-tile-hit-bd: color-mix(in srgb, var(--danger) 44%, var(--line));
+  --u-tile-warn-bg: color-mix(in srgb, var(--severity-medium) 10%, var(--surface));
+  --u-tile-warn-bd: color-mix(in srgb, var(--severity-medium) 44%, var(--line));
+  --u-tile-pend-bg: var(--surface-2);
+  --u-tile-pend-bd: var(--line-strong);
+  --u-stripe: color-mix(in srgb, var(--ink) 4%, transparent);
+  --u-sel-ring: color-mix(in srgb, var(--ink) 26%, transparent);
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
   background: var(--u-bg);
   color: var(--u-ink);
-  color-scheme: dark;
   -webkit-font-smoothing: antialiased;
 }
 
-.ultra-shell[data-ultra-skin="carbon"] {
-  --u-bg: #09090b;
-  --u-surface: #0e0e11;
-  --u-raise: #141418;
-  --u-raise-2: #1c1c22;
-  --u-line: #27272a;
-  --u-line-soft: #1c1c20;
-  --u-tick: #3f3f46;
-  --u-ink: #fafafa;
-  --u-ink-2: #d4d4d8;
-  --u-dim: #8e8e99;
-  --u-mint: #34d399;
-  --u-cleared-zero: #10b981;
-  --u-amber: #fbbf24;
-  --u-crimson: #fb7185;
-  --u-cyan: #e4e4e7;
-  --u-dot-grid: #1f1f24;
-  --u-ring-track: #18181b;
-  --u-glass: rgba(14, 14, 17, 0.92);
-}
-
-.ultra-shell[data-ultra-theme="light"] {
-  --u-bg: #f2f4f8;
-  --u-surface: #ffffff;
-  --u-raise: #f8fafc;
-  --u-raise-2: #eef2f7;
-  --u-line: #e2e8f0;
-  --u-line-soft: #edf1f7;
-  --u-tick: #cbd5e1;
-  --u-ink: #0f172a;
-  --u-ink-2: #334155;
-  --u-dim: #64748b;
-  --u-mint: #059669;
-  --u-cleared-zero: #10b981;
-  --u-amber: #d97706;
-  --u-crimson: #e11d48;
-  --u-cyan: #0284c7;
-  --u-dot-grid: #d4dce8;
-  --u-ring-track: #dde4ef;
-  --u-ring-hover: #0f172a;
-  --u-hub-void: rgba(255, 255, 255, 0.88);
-  --u-stage-glow: rgba(2, 132, 199, 0.06);
-  --u-glass: rgba(255, 255, 255, 0.92);
-  --u-shadow-glass: 0 6px 20px rgba(15, 23, 42, 0.08);
-  --u-shadow-tip: 0 10px 28px rgba(15, 23, 42, 0.14);
-  --u-sector-hit-fill: rgba(225, 29, 72, 0.16);
-  --u-sector-ok-fill: rgba(16, 185, 129, 0.18);
-  --u-sat-halo: rgba(5, 150, 105, 0.22);
-  --u-tile-ok-bg: #ecfdf5;
-  --u-tile-ok-bd: #86efac;
-  --u-tile-ok-strong-bg: #d1fae5;
-  --u-tile-ok-strong-bd: #34d399;
-  --u-tile-hit-bg: #fff1f2;
-  --u-tile-hit-bd: #fda4af;
-  --u-tile-warn-bg: #fffbeb;
-  --u-tile-warn-bd: #fcd34d;
-  --u-tile-pend-bg: #f1f5f9;
-  --u-tile-pend-bd: #cbd5e1;
-  --u-stripe: rgba(15, 23, 42, 0.04);
-  --u-sel-ring: rgba(15, 23, 42, 0.24);
-  color-scheme: light;
-}
-
-.ultra-shell[data-ultra-theme="light"][data-ultra-skin="carbon"] {
-  --u-bg: #f4f4f6;
-  --u-surface: #ffffff;
-  --u-raise: #fafafa;
-  --u-raise-2: #f0f0f3;
-  --u-line: #e4e4e7;
-  --u-line-soft: #efefef;
-  --u-tick: #d4d4d8;
-  --u-ink: #09090b;
-  --u-ink-2: #27272a;
-  --u-dim: #71717a;
-  --u-cyan: #18181b;
-  --u-dot-grid: #dcdce2;
-  --u-ring-track: #e4e4e7;
-  --u-tile-pend-bg: #f4f4f6;
-  --u-tile-pend-bd: #d4d4d8;
-}
-
 .ultra-shell :focus-visible {
-  outline: 1.5px solid var(--u-cyan);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -144,7 +62,7 @@
   background-image:
     radial-gradient(circle at 50% 48%, var(--u-stage-glow), transparent 56%),
     radial-gradient(var(--u-dot-grid) 1px, transparent 1px);
-  background-size: 100% 100%, 24px 24px;
+  background-size: 100% 100%, 20px 20px;
   touch-action: none;
 }
 
@@ -152,6 +70,26 @@
   background-color: var(--u-bg);
   background-image: radial-gradient(var(--u-dot-grid) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+
+.ultra-shell[data-backdrop="lines"] :is(.ultra-constellation-stage, .ultra-carbon-grid) {
+  background-image:
+    linear-gradient(to right, var(--u-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--u-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.ultra-shell[data-backdrop="cross"] :is(.ultra-constellation-stage, .ultra-carbon-grid) {
+  background-image:
+    radial-gradient(var(--u-tick) 1.5px, transparent 1.5px),
+    linear-gradient(to right, color-mix(in srgb, var(--u-line) 65%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--u-line) 65%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: -0.5px -0.5px, 0 0, 0 0;
+}
+
+.ultra-shell[data-backdrop="plain"] :is(.ultra-constellation-stage, .ultra-carbon-grid) {
+  background-image: none;
 }
 
 .ultra-tile-pending {
@@ -227,53 +165,11 @@
   transition: stroke-dashoffset 0.44s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.ultra-tab-track {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 7px;
-  border: 1px solid var(--u-line);
-  background: var(--u-bg);
-}
-
-.ultra-tab-thumb {
-  background: var(--u-raise-2);
-  border: 1px solid var(--u-tick);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-}
-
-.ultra-tab {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  white-space: nowrap;
-  border-radius: 5px;
-  border: 1px solid transparent;
-  padding: 4px 10px;
-  font-size: 12px;
-  line-height: 1.35;
-  color: var(--u-dim);
-  transition: color 0.14s, background-color 0.14s, border-color 0.14s;
-  cursor: pointer;
-}
-.ultra-tab:hover { color: var(--u-ink); }
-.ultra-tab[data-active="true"] {
-  background: var(--u-raise-2);
-  border-color: var(--u-tick);
-  color: var(--u-ink);
-  font-weight: 500;
-}
-.ultra-tab-track[data-fluid="true"] .ultra-tab[data-active="true"] {
-  background: transparent;
-  border-color: transparent;
-}
-
 .ultra-glass-pill {
   background: var(--u-glass);
   backdrop-filter: blur(12px);
   border: 1px solid var(--u-line);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: var(--u-shadow-glass);
 }
 
@@ -283,11 +179,11 @@
   gap: 5px;
   height: 29px;
   padding: 0 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--u-line);
   background: var(--u-raise);
   color: var(--u-ink-2);
-  font-size: 11.5px;
+  font-size: 0.75rem;
   transition: border-color 0.14s, color 0.14s, background-color 0.14s;
   cursor: pointer;
 }
@@ -327,7 +223,7 @@
   background: var(--u-raise);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 10.5px;
+  font-size: 0.6875rem;
   color: var(--u-dim);
   transition: border-color 0.14s, color 0.14s, background-color 0.14s;
   cursor: pointer;
@@ -370,7 +266,7 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 0.6875rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--u-dim);
@@ -430,7 +326,7 @@
   background: var(--u-raise);
   color: var(--u-ink);
   box-shadow: var(--u-shadow-tip);
-  font-size: 11.5px;
+  font-size: 0.75rem;
   animation: ultra-tip-in 0.14s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

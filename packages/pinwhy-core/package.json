@@ -1,6 +1,6 @@
 {
   "name": "pinwhy-core",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Event-sourced external memory SDK for AI agents: explicit nodes, evidence relations, replay and recoverable context.",
   "type": "module",
@@ -19,7 +19,7 @@
   "files": ["lib/", "README.md", "LICENSE"],
   "engines": { "node": ">=18" },
   "license": "MIT",
-  "homepage": "https://github.com/Fruit-Guardians/pinwhy#readme",
+  "homepage": "https://pinwhy.bx33661.com",
   "repository": { "type": "git", "url": "git+https://github.com/Fruit-Guardians/pinwhy.git", "directory": "packages/pinwhy-core" },
   "bugs": { "url": "https://github.com/Fruit-Guardians/pinwhy/issues" },
   "keywords": ["pinwhy", "agent-memory", "event-sourcing", "sdk", "local-first"],

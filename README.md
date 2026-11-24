@@ -1,29 +1,24 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Fruit-Guardians/pinwhy/main/design/pinwhy-logo/pinwhy-logo-light.svg">
-    <img src="https://raw.githubusercontent.com/Fruit-Guardians/pinwhy/main/design/pinwhy-logo/pinwhy-logo-dark.svg" alt="Pinwhy" width="280">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/pinwhy-logo-light.svg">
+    <img src="docs/assets/pinwhy-logo-dark.svg" alt="Pinwhy" width="260">
   </picture>
 </p>
 
-<h3 align="center">给 AI Agent 留下判断的依据</h3>
+<p align="center">面向 AI Agent 的本地状态记录工具与可视化工作台</p>
 
 <p align="center">
-  与宿主无关的 Agent 外置记忆与实时可视化工作台。<br>
-  把关键判断、正反证据与当前焦点留在项目本地——跨会话无缝接续，让人随时看清推理来龙去脉。
-</p>
-
-<p align="center">
-  <a href="https://pinwhy.bx33661.com">官方网站</a> ·
-  <a href="#quick-start">快速开始</a> ·
-  <a href="#features">核心能力</a> ·
-  <a href="#daily-use">使用方式</a> ·
-  <a href="#cli">常用命令</a> ·
-  <a href="https://github.com/Fruit-Guardians/pinwhy/issues">问题反馈</a>
+  <a href="https://pinwhy.bx33661.com">官网</a> ·
+  <a href="#quick-start">安装</a> ·
+  <a href="#daily-use">用法</a> ·
+  <a href="#cli">命令</a> ·
+  <a href="#documentation">文档</a> ·
+  <a href="https://github.com/Fruit-Guardians/pinwhy/issues">反馈</a>
 </p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/pinwhy"><img src="https://img.shields.io/npm/v/pinwhy?style=flat-square&color=147453" alt="npm version"></a>
-  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-%E2%89%A5%2018-147453?style=flat-square" alt="Node.js ≥ 18"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D18-147453?style=flat-square" alt="Node.js >= 18"></a>
   <img src="https://img.shields.io/badge/dependencies-0-147453?style=flat-square" alt="zero dependencies">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-147453?style=flat-square" alt="MIT license"></a>
 </p>
@@ -32,43 +27,35 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Fruit-Guardians/pinwhy/main/site/public/shots/stage-all-zh-dark.webp">
-    <img src="https://raw.githubusercontent.com/Fruit-Guardians/pinwhy/main/site/public/shots/stage-all-zh-light.webp" alt="Pinwhy 可视化工作台" width="1080">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/workspace-dark.webp">
+    <img src="docs/assets/workspace-light.webp" alt="Pinwhy 工作台" width="1080">
   </picture>
 </p>
 
----
-
 <a id="introduction"></a>
 
-## 为什么需要 Pinwhy
+## 简介
 
-一次复杂排障、架构摸底或安全审计，往往跨越多轮对话、多个分支甚至多个 Agent。一旦触发上下文压缩或切换会话，线性聊天记录很难交代清楚：**之前试过哪些方向、为什么排除某个猜测、哪条结论真有证据支撑。**
+在多轮排障、代码阅读或安全审计中，上下文压缩和会话切换容易丢失已确认的事实、已排除的假设和未解决的问题。
 
-**Pinwhy** 将探索过程中的目标、假设、正反证据与未决问题结构化地保存在项目本地（`.pinwhy/`）：
-
-- **对 Agent**：压缩或换会话后按 Token 预算精准读回现场，不丢上下文、不重复踩坑。
-- **对你**：在浏览器工作台中直观审视推理脉络与阶段战果，随时补充观察、点拨方向或多人交接。
+Pinwhy 把目标、假设、证据、有向关系和检查点以追加事件日志写入项目本地 `.pinwhy/events.jsonl`。Agent 通过 CLI 按 Token 预算读回上下文，开发者通过本地 Web 工作台查看推理结构或直接补充记录。
 
 <a id="features"></a>
 
-## 核心能力
+## 功能
 
-- **证据化推理图谱**：观察、猜测、结论与问题独立成点，通过 `supports`、`contradicts`、`depends-on`、`supersedes` 等显式关系还原判断演变。
-- **跨会话与多 Agent 接力**：通过检查点与预算化上下文恢复现场；多 Agent 共享同一块黑板，各自保留独立关注位置与署名。
-- **一板多视图工作台**：
-  - **通用视图**：提供现场、逻辑与全局 2D / 3D 视图，适合日常研发排障与代码调研。
-  - **安全审计模式**：围绕议题矩阵与双翼卷宗对照支持证据、反证和成立前提。
-  - **Ultra 覆盖底座**（可选 `pinwhy-ultra`）：面向大规模审查，确定性追踪文件切片覆盖、探针与跨模块依赖盲区。
-- **本地优先，零依赖交付**：零运行时第三方依赖，数据留在项目本地 `.pinwhy/`（自动生成 `.gitignore`），支持导出单文件离线 HTML、Markdown、Mermaid 与 SARIF 2.1.0。
+- **结构化记录**：独立保存目标、问题、假设、观察与发现，支持 `supports`、`contradicts`、`depends-on`、`supersedes` 等有向关系；状态、严重度与可信度正交记录，不自动推断。
+- **预算化恢复与多 Agent 协作**：通过检查点和 `pinwhy context` 输出只读上下文；多个 Agent 共享同一事件日志，保留各自的写入署名与关注游标。
+- **本地 Web 工作台**：内置通用视图（2D / 2.5D）、安全审计视图（议题矩阵与正反证据对照）以及可选的 `pinwhy-ultra` 文件切片覆盖视图。
+- **零依赖与离线导出**：零运行时第三方依赖，数据保存在 `.pinwhy/`（初始化自动生成 `.gitignore`），支持导出单文件 HTML、Markdown、Mermaid 和 SARIF 2.1.0。
 
 <a id="requirements"></a>
 <a id="manual-install"></a>
 <a id="quick-start"></a>
 
-## 快速开始
+## 安装与接入
 
-环境要求：**Node.js ≥ 18**（支持 macOS、Linux、Windows）。
+运行环境：**Node.js >= 18**（macOS / Linux / Windows）。
 
 ### 1. 安装 CLI
 
@@ -77,72 +64,54 @@ npm install -g pinwhy
 pinwhy --version
 ```
 
-安装包内含 CLI、Web 工作台与完整 Agent Skill，零额外构建依赖。
-
-### 2. 一句话交给 Agent 接入（推荐）
-
-打开你的项目，直接将下面这句话发给你的 AI Agent：
-
-> 请阅读 https://github.com/Fruit-Guardians/pinwhy 的接入说明，为当前项目安装或复用 Pinwhy，按当前宿主配置完整 Skill 并打开工作台。保留已有记录，完成后告诉我访问地址。
+安装包包含 CLI、已构建的 Web 工作台和 Agent Skill。
 
 <a id="agent-integration"></a>
 
-### 3. 或在终端按宿主配置
+### 2. 配置宿主环境
 
-| 宿主环境 | 快速接入命令 |
+| 宿主 | 命令 |
 | --- | --- |
-| **Claude Code**（含 Skill、自动恢复 Hook 与后台服务） | `pinwhy setup --title "我的项目" --open` |
-| **Codex / Cursor / Gemini CLI / OpenCode / Copilot CLI / OMP** | `pinwhy init --title "我的项目"`<br>`pinwhy skill install`（方向键选项目或 `--user` 全局安装）<br>`pinwhy serve --open` |
-| **DeepSeek Harness** | 安装原生插件 [`dsh-pinwhy`](https://github.com/Fruit-Guardians/pinwhy/blob/main/plugins/dsh-pinwhy/README.md)，内置 11 个原生工具与内嵌画板 |
+| Claude Code（初始化 + Skill + 恢复 Hook + 服务） | `pinwhy setup --title "项目名称" --open` |
+| Codex / Cursor / Gemini CLI / OpenCode / Copilot CLI / OMP | `pinwhy init --title "项目名称"`<br>`pinwhy skill install`（或加 `--user` 全局安装）<br>`pinwhy serve --open` |
+| DeepSeek Harness | 安装可选插件 [`dsh-pinwhy`](https://github.com/Fruit-Guardians/pinwhy/blob/main/plugins/dsh-pinwhy/README.md) |
 
-> 更多非交互脚本参数（如 `--host cursor`、`--all`）与后台常驻服务说明见 [Agent 接入指南](skills/pinwhy/references/setup.md)。
+也可以直接把下面指令发给当前项目里的 Agent 完成接入：
+
+> 请阅读 https://github.com/Fruit-Guardians/pinwhy ，为当前项目配置 Pinwhy Skill 并启动工作台，保留已有记录，完成后返回访问地址。
+
+非交互参数（`--host`、`--all`）与后台服务说明见 [Agent 接入参考](skills/pinwhy/references/setup.md)。
 
 <a id="daily-use"></a>
 
-## 日常工作流
+## 基本用法
 
-### 第一步：交代任务，边探边记
-
-加载 Pinwhy Skill 后，像平时一样用自然语言布置任务，让 Agent 把关键转折记在黑板上：
-
-> 排查主题设置在重启后失效的原因。请用 Pinwhy 记录目标、关键假设和验证证据，区分待验证猜测与已确认事实，并在发现反证或切换方向时及时更新。
-
-### 第二步：在工作台审视与协同
-
-运行 `pinwhy serve --open`（或打开 Agent 返回的地址），即可实时跟进探查现场：
-
-- **切换阅读视角**：在通用图谱、安全审计卷宗与时间线检查点之间无缝切换，浏览操作只读不干扰 Agent 游标。
-- **人机直接联动**：你可以直接在页面上补充线索、修正状态或提出新问题，写入内容会自动进入后续 Agent 恢复上下文。
+1. **记录**：加载 Skill 后，在任务提示中要求 Agent 用 Pinwhy 记录目标、假设和证据。
+2. **查看**：运行 `pinwhy serve --open` 在浏览器打开本地工作台，浏览节点关系、切换审计视图或直接编辑节点（只读浏览不会移动 Agent 游标）。
+3. **恢复**：压缩或结束前让 Agent 保存检查点（`pinwhy checkpoint`）；新会话通过 `pinwhy context` 读回当前焦点与未决问题。
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Fruit-Guardians/pinwhy/main/site/public/shots/stage-audit-zh-dark.webp">
-    <img src="https://raw.githubusercontent.com/Fruit-Guardians/pinwhy/main/site/public/shots/stage-audit-zh-light.webp" alt="Pinwhy 安全审计模式" width="1080">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/audit-dark.webp">
+    <img src="docs/assets/audit-light.webp" alt="Pinwhy 安全审计视图" width="1080">
   </picture>
 </p>
-
-### 第三步：暂停存档，跨会话续接
-
-- **离开或压缩前**：让 Agent *“保存当前 Pinwhy 检查点，写清已确认结论、未决问题与下一步关注点”*。
-- **开启新会话时**：告诉新会话 *“从当前项目的 Pinwhy 恢复现场并继续推进”*，Agent 会按预算读回核心脉络并按需展开细节。
 
 <a id="cli"></a>
 
 ## 常用命令
 
-日常记录通常由 Agent 自动完成；你也可以随时通过终端查看、导出或备份：
-
 ```sh
-pinwhy status                         # 查看当前项目黑板与工作台在线状态
-pinwhy serve --open                   # 启动并在浏览器打开本地可视化工作台
-pinwhy stop                           # 停止当前项目的本地工作台服务
-pinwhy digest                         # 终端速览当前焦点、开放问题与近期进展
-pinwhy search "鉴权"                  # 按关键词或条件检索节点记录
-pinwhy show <节点ID>                  # 查看单条判断的完整内容与关联证据
-pinwhy export --out board.html        # 导出零依赖单文件离线交互 HTML
-pinwhy export --format markdown       # 导出 Markdown / Mermaid / SARIF 2.1.0 报告
-pinwhy backup --out ../pinwhy-backup  # 完整备份事件日志并生成完整性校验清单
-pinwhy doctor                         # 诊断运行环境、宿主接入与日志健康度
+pinwhy status                         # 查看当前黑板与本地服务状态
+pinwhy serve --open                   # 启动并打开本地 Web 工作台
+pinwhy stop                           # 停止当前项目的工作台服务
+pinwhy digest                         # 在终端输出当前焦点与近期变更摘要
+pinwhy search "auth"                  # 按关键词或条件检索节点
+pinwhy show <id>                      # 查看单个节点及关联边
+pinwhy export --out board.html        # 导出单文件离线 HTML
+pinwhy export --format markdown       # 导出 Markdown / Mermaid / SARIF 2.1.0
+pinwhy backup --out ../pinwhy-backup  # 备份事件日志并生成校验清单
+pinwhy doctor                         # 检查运行环境、宿主配置与日志完整性
 ```
 
 <a id="release"></a>
@@ -155,36 +124,35 @@ npm install -g pinwhy@latest
 pinwhy --version
 ```
 
-若使用源码不可变版本管理（`release install`），可通过 `pinwhy release check` 检查更新，或运行 `pinwhy release --help` 查看版本切换与回滚命令。
+如果使用源码版本目录（`release install`），可通过 `pinwhy release check` 检查更新，详见 `pinwhy release --help`。
 
 <a id="troubleshooting"></a>
 
 ## 常见问题
 
-**工作台打不开或端口被占用？**<br>
-运行 `pinwhy status` 查看当前服务归属；若默认端口冲突，可执行 `pinwhy serve --port 0 --open` 自动分配空闲端口。
+**端口被占用或工作台打不开**<br>
+执行 `pinwhy status` 查看当前服务归属；端口冲突时运行 `pinwhy serve --port 0 --open` 自动分配端口。
 
-**Agent 没有主动写入记录？**<br>
-确认当前会话已加载项目的 Pinwhy Skill（新安装 Skill 后部分宿主需新开会话生效），并在首轮指令中提示“使用 Pinwhy 记录本次任务”。
+**Agent 未调用 Pinwhy**<br>
+确认当前会话已加载项目的 Pinwhy Skill（新安装 Skill 后部分宿主需重开会话），并在首条指令中指明使用 Pinwhy 记录。
 
-**数据保存在哪里，外发分享安全吗？**<br>
-所有记录保存在项目本地 `.pinwhy/` 目录，初始化时自动包含 `.gitignore` 防止误提交。导出离线 HTML 时会自动剥离工具原始输出并脱敏项目外绝对路径，但对外分享前仍建议人工核对节点正文中的业务敏感信息。
+**本地数据与外发安全**<br>
+记录保存在 `.pinwhy/`，初始化时自带 `.gitignore`。导出离线 HTML 会移除原始工具输出并脱敏项目外绝对路径；公开分享前仍请检查正文是否包含业务敏感内容。
 
 <a id="documentation"></a>
 
-## 进阶文档与生态
+## 文档
 
-| 主题 | 入口 |
+| 内容 | 链接 |
 | --- | --- |
-| 宿主接入、Hook 与常驻服务 | [Agent 接入指南](skills/pinwhy/references/setup.md) |
-| 节点维度与关系语义参考 | [记录语义](skills/pinwhy/references/recording.md) · [可选记录方法](skills/pinwhy/methods/INDEX.md) |
-| 多 Agent 协作与子任务汇总 | [并行 Agent 指南](skills/pinwhy/references/parallel-agents.md) |
-| 全量切片覆盖与缺口调度 | [pinwhy-ultra Skill](skills/pinwhy-ultra/SKILL.md) · [协议说明](skills/pinwhy-ultra/references/protocol.md) |
-| 代码安全审计场景包 | [pinwhy-code-audit](skills/pinwhy-code-audit/README.md) |
-| DeepSeek Harness 原生插件 | [dsh-pinwhy 说明](https://github.com/Fruit-Guardians/pinwhy/blob/main/plugins/dsh-pinwhy/README.md) |
-| Node.js 编程接口（SDK） | [pinwhy-core](https://github.com/Fruit-Guardians/pinwhy/blob/main/packages/pinwhy-core/README.md) |
-| 版本记录与问题反馈 | [Releases](https://github.com/Fruit-Guardians/pinwhy/releases) · [GitHub Issues](https://github.com/Fruit-Guardians/pinwhy/issues) |
+| 宿主接入与服务管理 | [skills/pinwhy/references/setup.md](skills/pinwhy/references/setup.md) |
+| 节点类型与关系语义 | [skills/pinwhy/references/recording.md](skills/pinwhy/references/recording.md) · [可选记录方法](skills/pinwhy/methods/INDEX.md) |
+| 多 Agent 并行协作 | [skills/pinwhy/references/parallel-agents.md](skills/pinwhy/references/parallel-agents.md) |
+| 文件切片覆盖（Ultra） | [skills/pinwhy-ultra/SKILL.md](skills/pinwhy-ultra/SKILL.md) · [协议说明](skills/pinwhy-ultra/references/protocol.md) |
+| 代码安全审计包 | [skills/pinwhy-code-audit/README.md](skills/pinwhy-code-audit/README.md) |
+| DeepSeek Harness 插件 | [plugins/dsh-pinwhy/README.md](https://github.com/Fruit-Guardians/pinwhy/blob/main/plugins/dsh-pinwhy/README.md) |
+| Node.js SDK | [packages/pinwhy-core/README.md](https://github.com/Fruit-Guardians/pinwhy/blob/main/packages/pinwhy-core/README.md) |
 
-## 开源许可
+## 许可
 
-基于 [MIT License](LICENSE) 开源发布。
+[MIT](LICENSE)

@@ -92,6 +92,7 @@ export function deriveGaps(nodes: BoardNode[], edges: BoardEdge[], byId: Map<str
     diskStaleIds: [],
     shallowSlices: [],
     staleSlices: [],
+    dependencyCycles: [],
   };
 }
 

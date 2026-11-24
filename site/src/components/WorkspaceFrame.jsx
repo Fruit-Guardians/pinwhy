@@ -9,6 +9,7 @@ export const FRAME_H = 800;
 export const WORKSPACE_URLS = {
   context: 'view=context',
   audit: 'workspace=audit&issue=g1&candidate=fd1',
+  ultra: 'workspace=ultra',
   logic: 'view=logic',
   all: 'view=all',
   board: 'view=context&scene=2.5d',
@@ -44,7 +45,7 @@ function pressAuditCandidate(frame, id) {
 
 /**
  * Scaled offline workspace iframe with a still until the visitor opts in.
- * @param {'context'|'audit'|'logic'|'all'|'board'} view
+ * @param {'context'|'audit'|'ultra'|'logic'|'all'|'board'} view
  * @param {string|null} [action] optional control label to press after load (e.g. digest)
  */
 export default function WorkspaceFrame({ view = 'context', live, onLive, action = null, className = '' }) {
@@ -92,6 +93,8 @@ export default function WorkspaceFrame({ view = 'context', live, onLive, action 
       if (view === 'audit') {
         pressWorkspace(f, ws.audit);
         fitTimer = setTimeout(() => pressAuditCandidate(f, ws.auditCandidate), 120);
+      } else if (view === 'ultra') {
+        pressWorkspace(f, ws.ultra);
       } else {
         pressWorkspace(f, ws.general);
         setTimeout(() => pressWorkspace(f, ws[view]), 60);

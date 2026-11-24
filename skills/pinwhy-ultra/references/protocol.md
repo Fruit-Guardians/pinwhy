@@ -56,6 +56,7 @@ pinwhy-ultra reset --yes --cwd "/已确认项目"
 ```
 
 - `--refs` 会严格校验节点 ID 在 `.pinwhy/events.jsonl` 中存在；带上 `--refs` 时默认状态为 `flagged`，不带时为 `cleared`。
+- 若两个或多个切片/探针通过 `--depends-on` 形成互相依赖闭环（如 `p13 -> s31 -> p13`），只有闭环内所有成员均标记 `done` 后才会一同收敛（`breadthComplete=true`）。`done` / `next` / `check` 会输出非阻塞的 `dependency-cycle` 提示；若并非真正互为前提，可用回显提供的 `pinwhy-ultra done <id> --depends-on none`（保留其他依赖时传 `none,<dep>`）解除循环。
 - `reset` 向 `.pinwhy/ultra/ledger.jsonl` 追加一条 `reset` 记录以清空当前投影，不擦除历史台账记录，也**绝不触碰主黑板 `.pinwhy/events.jsonl`**。
 
 ### `check`（别名 `status`）— 承诺对账与认知边界体检

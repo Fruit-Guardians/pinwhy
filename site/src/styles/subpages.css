@@ -221,11 +221,12 @@
   align-items: center;
 }
 
+.install-row > div { min-width: 0; }
 .install-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
 .install-num { font: 600 12.5px var(--mono); color: var(--accent); }
 .install-head h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink); }
 .install-desc { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--muted); }
-.install-cmds { display: flex; flex-direction: column; gap: 8px; }
+.install-cmds { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 
 .install-yaml {
   margin: 0;
@@ -261,7 +262,7 @@
 }
 
 @media (max-width: 780px) {
-  .grid-2, .grid-3, .arch-flow, .install-row { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .arch-flow, .install-row { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ============================================================ Toast & View Transition */

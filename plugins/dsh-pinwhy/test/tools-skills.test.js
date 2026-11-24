@@ -58,7 +58,41 @@ test('reject invalid context and implicit next cursor selection', async (t) => {
   await assert.rejects(context.execute({ budget: 0 }, execution(project)), /budget/);
   await assert.rejects(specs.find((s) => s.name === 'pinwhy_cursor').execute({ id: 'next' }, execution(project)), /explicit/);
   await assert.rejects(specs.find((s) => s.name === 'pinwhy_node_patch').execute({ id: 'n1' }, execution(project)), /at least one/);
-  await assert.rejects(specs.find((s) => s.name === 'pinwhy_node_patch').execute({ id: 'n1', tags: [] }, execution(project)), /clearing tags/);
+  await assert.rejects(specs.find((s) => s.name === 'pinwhy_node_patch').execute({ id: 'n1', clear: ['unknown'] }, execution(project)), /clearable/);
+  await assert.rejects(specs.find((s) => s.name === 'pinwhy_node_patch').execute({ id: 'n1', status: 'open', clear: ['status'] }, execution(project)), /both set and clear/);
+  await assert.rejects(specs.find((s) => s.name === 'pinwhy_node_patch').execute({ id: 'n1', tags: ['a'], clear: ['tags'] }, execution(project)), /both set and clear/);
+  await assert.rejects(context.execute({ depth: 6 }, execution(project)), /depth/);
+  await assert.rejects(specs.find((s) => s.name === 'pinwhy_node_add').execute({ type: 'note', title: 'X', to: ['n1'], relateHere: true }, execution(project)), /combine/);
+  await assert.rejects(specs.find((s) => s.name === 'pinwhy_node_add').execute({ type: 'note', title: 'X', relation: 'supports' }, execution(project)), /require/);
+});
+
+test('v0.5.0 options: multi-target add, clear fields, historical replay, grouped multi-type search, and no-truncate', async (t) => {
+  const root = await temporary(t), project = await board(root), calls = [];
+  const bridge = { run: async (_scope, argv, _s, _b, _c, stdin) => { calls.push({ argv, stdin }); return { data: {} }; } };
+  const specs = new Map(toolSpecifications(normalizeConfig({ projects: [{ workspace: project }] }), bridge).map((s) => [s.name, s]));
+  await specs.get('pinwhy_node_add').execute({
+    type: 'observation', title: 'Linked note', to: ['g1', 'fd1'], relation: 'supports',
+    label: 'Direct check', requestId: 'req-add', rejectTruncation: true,
+  }, execution(project));
+  await specs.get('pinwhy_node_patch').execute({
+    id: 'n1', detail: '', tags: [], clear: ['status', 'confidence'], requestId: 'req-patch', rejectTruncation: true,
+  }, execution(project));
+  await assert.rejects(specs.get('pinwhy_context').execute({ depth: 3, asOf: 'cp1' }, execution(project)), { code: 'CONTEXT_CONTRACT' });
+  await specs.get('pinwhy_node_get').execute({ id: 'n1', asOf: 'cp1' }, execution(project));
+  await specs.get('pinwhy_search').execute({
+    types: ['finding', 'vuln'], relation: 'supports', relatedTo: 'fd1', groupBy: 'severity,status', asOf: 'cp1',
+  }, execution(project));
+  await specs.get('pinwhy_batch').execute({
+    operations: [{ op: 'node', type: 'note', title: 'Batch note' }], requestId: 'req-batch', rejectTruncation: true,
+  }, execution(project));
+  assert.deepEqual(calls.map((c) => c.argv), [
+    ['node', `--cwd=${project}`, '--agent=dsh:session-a', '--no-init', '--json', '--rel=supports', '--label=Direct check', '--request-id=req-add', '--to=g1', '--to=fd1', '--no-truncate', '--', 'add', 'observation', 'Linked note'],
+    ['edit', `--cwd=${project}`, '--agent=dsh:session-a', '--no-init', '--json', '--clear=status', '--clear=confidence', '--clear=detail', '--clear=tags', '--request-id=req-patch', '--no-truncate', '--', 'n1'],
+    ['context', `--cwd=${project}`, '--agent=dsh:session-a', '--depth=3', '--as-of=cp1'],
+    ['show', `--cwd=${project}`, '--json', '--as-of=cp1', '--', 'n1'],
+    ['search', `--cwd=${project}`, '--type=finding', '--type=vuln', '--rel=supports', '--related-to=fd1', '--group-by=severity,status', '--as-of=cp1', '--json'],
+    ['batch', `--cwd=${project}`, '--agent=dsh:session-a', '--no-init', '--json', '--request-id=req-batch', '--no-truncate'],
+  ]);
 });
 
 test('search and batch tools execute correctly with arguments and stdin serialization', async (t) => {

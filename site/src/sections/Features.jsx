@@ -71,7 +71,11 @@ export default function Features() {
               <div className="hl">your-project/</div>
               <div className="i1">├─ src/</div>
               <div className="i1 hl">└─ .pinwhy/</div>
-              <div className="i2 hl2">└─ events.jsonl<em>{F.local.tree}</em></div>
+              <div className="i2 hl2">├─ events.jsonl<em>{F.local.tree.events}</em></div>
+              <div className="i2">├─ state.json<em>{F.local.tree.state}</em></div>
+              <div className="i2">├─ .gitignore<em>{F.local.tree.ignore}</em></div>
+              <div className="i2">└─ ultra/</div>
+              <div className="i3">└─ ledger.jsonl<em>{F.local.tree.ultra}</em></div>
             </div>
             <div className="local-lo"><i />{F.local.loopback}</div>
           </div>

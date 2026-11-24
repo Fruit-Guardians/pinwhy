@@ -3,36 +3,21 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { ensure, paths, readEvents, addNode as storeAddNode } from '../../lib/store.js';
 import { startServer } from '../../lib/server.js';
 import { webcrypto } from 'node:crypto';
+import { openWebModules } from '../helpers/load-web-module.mjs';
 
 globalThis.crypto ??= webcrypto;
 
-// Compile pure viewer modules without requiring a DOM or a specific Node TS loader.
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinwhy-presenter-'));
-after(() => fs.rmSync(dir, { recursive: true, force: true }));
-const root = fileURLToPath(new URL('../../', import.meta.url));
-execFileSync(process.execPath, [path.join(root, 'node_modules/typescript/bin/tsc'), '--target', 'ES2022', '--module', 'ESNext', '--moduleResolution', 'Bundler', '--skipLibCheck', '--outDir', dir, path.join(root, 'web/src/presentation.ts'), path.join(root, 'web/src/api/client.ts'), path.join(root, 'web/src/workspace/selectors.ts'), path.join(root, 'web/src/card-themes.ts'), path.join(root, 'web/src/preferences.ts')], { cwd: dir });
-function resolveModuleExtensions(directory) {
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const p = path.join(directory, entry.name);
-    if (entry.isDirectory()) resolveModuleExtensions(p);
-    else if (entry.name.endsWith('.js')) fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace(/from '(\.\.?\/[^']+)'/g, (_all, name) => `from '${name}.js'`));
-  }
-}
-resolveModuleExtensions(dir);
-fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ type: 'module' }));
-const modulePath = path.join(dir, 'presentation.js');
-const { confidenceLabel, presentNode, nodeStateSummary, matchesNode, statusLabel, severityLabel, typeLabel } = await import(pathToFileURL(modulePath).href);
-const { changeDraft, EMPTY_EDIT, EMPTY_NEW, existingLink, parseTags, nodeInputFromDraft, nodePatchFromDraft, sourceLocation, historyValue } = await import(pathToFileURL(path.join(dir, 'research-state.js')).href);
-const api = await import(pathToFileURL(path.join(dir, 'api/client.js')).href);
-const { selectWorkspaceSnapshot, selectWorkspaceAgent } = await import(pathToFileURL(path.join(dir, 'workspace/selectors.js')).href);
-const { CARD_THEMES, DEFAULT_CARD_THEME, parseCardTheme } = await import(pathToFileURL(path.join(dir, 'card-themes.js')).href);
-const prefs = await import(pathToFileURL(path.join(dir, 'preferences.js')).href);
+const web = await openWebModules();
+after(() => web.close());
+const { confidenceLabel, presentNode, nodeStateSummary, matchesNode, statusLabel, severityLabel, typeLabel } = await web.load('/src/presentation.ts');
+const { changeDraft, EMPTY_EDIT, EMPTY_NEW, existingLink, parseTags, nodeInputFromDraft, nodePatchFromDraft, sourceLocation, historyValue } = await web.load('/src/research-state.ts');
+const api = await web.load('/src/api/client.ts');
+const { selectWorkspaceSnapshot, selectWorkspaceAgent } = await web.load('/src/workspace/selectors.ts');
+const { CARD_THEMES, DEFAULT_CARD_THEME, parseCardTheme } = await web.load('/src/card-themes.ts');
+const prefs = await web.load('/src/preferences.ts');
 const node = { id: 'node-7', type: 'hypothesis', title: 'Gateway policy。Verify middleware next.', detail: 'Session boundary', status: 'open', severity: 'high', confidence: 'static-confirmed' };
 
 test('node presenter splits a heading from evidence without rewriting it', () => {

@@ -1,8 +1,8 @@
 {
   "name": "pinwhy",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "description": "Pinwhy — Agent 外置记忆：留下判断、证据与现场，跨会话接着思考",
-  "homepage": "https://github.com/Fruit-Guardians/pinwhy#readme",
+  "homepage": "https://pinwhy.bx33661.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Fruit-Guardians/pinwhy.git"
@@ -33,6 +33,7 @@
     "skills/pinwhy-code-audit/assets/",
     "skills/pinwhy-code-audit/references/",
     "public/",
+    "docs/assets/",
     "README.md",
     "LICENSE"
   ],

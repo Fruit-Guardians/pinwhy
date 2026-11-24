@@ -21,6 +21,7 @@ type Props = {
   selectedBarId: string | null;
   selectedNodeId: string | null;
   resetSignal: number;
+  showZoomSlider?: boolean;
   onFilterChange: (next: UltraFilter) => void;
   onOpenGates: () => void;
   onSelectSector: (sector: string) => void;
@@ -36,6 +37,7 @@ export function UltraConstellationView({
   selectedBarId,
   selectedNodeId,
   resetSignal,
+  showZoomSlider = false,
   onFilterChange,
   onOpenGates,
   onSelectSector,
@@ -115,6 +117,26 @@ export function UltraConstellationView({
       };
     });
   }, []);
+
+  const zoomToPct = useCallback((targetPct: number) => {
+    const el = stageRef.current;
+    const rect = el?.getBoundingClientRect();
+    const mx = rect ? rect.width / 2 : box.w / 2;
+    const my = rect ? rect.height / 2 : box.h / 2;
+    const baseFit = Math.max(0.3, fitRef.current || 1);
+    const nextScale = Math.max(baseFit * 0.45, Math.min(baseFit * 4.5, (fitRef.current || 1) * (targetPct / 100)));
+    setSmoothCamera(false);
+    setView((prev) => {
+      if (Math.abs(nextScale - prev.scale) < 0.0005) return prev;
+      const ratio = nextScale / prev.scale;
+      return {
+        ...prev,
+        scale: nextScale,
+        x: mx - (mx - prev.x) * ratio,
+        y: my - (my - prev.y) * ratio,
+      };
+    });
+  }, [box.w, box.h]);
 
   // Native non-passive wheel listener: two-finger scroll pans cleanly; Ctrl/Cmd+wheel or pinch zooms around pointer.
   useEffect(() => {
@@ -279,8 +301,10 @@ export function UltraConstellationView({
       <ConstellationZoomBar
         zoomPct={zoomPct}
         wheelMode={wheelMode}
+        showZoomSlider={showZoomSlider}
         onZoomIn={() => zoomAtPoint(1.18, undefined, undefined, true)}
         onZoomOut={() => zoomAtPoint(1 / 1.18, undefined, undefined, true)}
+        onZoomToPct={zoomToPct}
         onFit={() => applyFit(box.w, box.h, true)}
         onToggleWheelMode={() => setWheelMode((m) => (m === 'pan' ? 'zoom' : 'pan'))}
       />

@@ -127,6 +127,7 @@ export type UltraSlice = {
   effectiveStatus: UltraSliceStatus;
   shallowReason?: string | null;
   unverifiedDependencies?: string[];
+  dependencyCycle?: string[];
   humanFollowups?: string[];
   note?: string;
   refs?: string[];
@@ -199,6 +200,7 @@ export type UltraSnapshot = {
     untrackedFiles: number;
     diskStale: number;
     remainingSlices: number;
+    dependencyCycles?: number;
     coverageRatio: number;
   };
   slices: UltraSlice[];
@@ -211,8 +213,9 @@ export type UltraSnapshot = {
     humanSignals: UltraGapNode[];
     untrackedFiles: string[];
     diskStaleIds: string[];
-    shallowSlices: { id: string; path: string; startLine: number; endLine: number; reason: string | null; unverifiedDependencies?: string[]; humanFollowups?: string[] }[];
+    shallowSlices: { id: string; path: string; startLine: number; endLine: number; reason: string | null; unverifiedDependencies?: string[]; humanFollowups?: string[]; dependencyCycle?: string[] }[];
     staleSlices: { id: string; path: string; startLine: number; endLine: number }[];
+    dependencyCycles?: { cycle: string[]; sliceIds: string[]; resolved: boolean; breakHint: string }[];
   };
   breadthComplete: boolean;
   commitmentComplete?: boolean;

@@ -209,6 +209,10 @@ export async function verifyNpmPackages({ source = ROOT, artifactsDir, registry 
     assert.ok(fs.readFileSync(offline, 'utf8').includes('Packaged CLI evidence'));
     const executable = await run(process.execPath, [npm, 'exec', '--offline', '--', 'pinwhy', 'capabilities', '--json'], cliConsumer);
     assert.equal(JSON.parse(executable.stdout).version, capability.version);
+    const ultraCli = path.join(cliConsumer, 'node_modules', 'pinwhy-cli', 'bin', 'pinwhy-ultra.js');
+    assert.equal(fs.statSync(ultraCli).isFile(), true);
+    const ultraExec = await run(process.execPath, [npm, 'exec', '--offline', '--', 'pinwhy-ultra', '--version', '--json'], cliConsumer);
+    assert.equal(JSON.parse(ultraExec.stdout).version, capability.version);
     await checkViewer(cli, board, env);
     assert.equal(hash(eventFile), before, 'installed CLI reads, exports and viewer must preserve the event log');
     return {

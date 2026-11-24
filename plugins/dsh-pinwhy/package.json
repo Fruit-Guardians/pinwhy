@@ -1,6 +1,6 @@
 {
   "name": "dsh-pinwhy",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Pinwhy external memory for DeepSeek Harness: preserve reasoning, evidence and handoffs across sessions without choosing your next step.",
   "icon": "./assets/pinwhy-icon.svg",
   "homepage": "https://github.com/Fruit-Guardians/pinwhy#readme",

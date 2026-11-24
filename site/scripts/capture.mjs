@@ -201,10 +201,11 @@ try {
           await page.close();
         }
 
-        // 4. Stage flat + audit views.
+        // 4. Stage flat, audit & ultra views.
         for (const [view, query, fit] of [
           ['context', 'view=context', true],
           ['audit', 'workspace=audit&issue=g1&candidate=fd1', false],
+          ['ultra', 'workspace=ultra', false],
           ['logic', 'view=logic', true],
           ['all', 'view=all', true],
         ]) {
@@ -212,6 +213,9 @@ try {
           if (fit) {
             await page.click(`button[aria-label="${L.fit}"]`);
             await sleep(800);
+          } else if (view === 'ultra') {
+            await page.waitForSelector('.ultra-constellation-stage svg', { timeout: 15000 });
+            await sleep(700);
           }
           await sleep(400);
           await page.screenshot({ path: path.join(OUT, `stage-${view}-${lang}-${theme}.webp`), type: 'webp', quality: 86 });
@@ -228,8 +232,8 @@ try {
           await page.click('[data-scene3d-trigger]');
           await waitForScene3D(page, L);
           await page.evaluate(() => document.activeElement?.blur());
-          await page.mouse.move(12, 12);
-          await sleep(200);
+          await page.mouse.move(640, 20);
+          await sleep(250);
           await page.screenshot({ path: path.join(OUT, `stage-board-${lang}-${theme}.webp`), type: 'webp', quality: 88 });
           console.log('saved', `stage-board-${lang}-${theme}`);
           await page.close();

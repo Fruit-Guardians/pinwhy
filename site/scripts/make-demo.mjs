@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Builds the synthetic demo boards shown on the site and exports each as the real offline workspace.
+// Builds the synthetic demo boards shown on the site (including Ultra coverage ledgers)
+// and exports each as the real offline workspace HTML.
 //   node site/scripts/make-demo.mjs
-// Writes site/public/demo/board-zh.html and board-en.html. Everything goes through the public CLI;
-// the content is synthetic and mirrors the repository's own demo (scripts/demo.js) in two languages.
+// Writes site/public/demo/board-zh.html and board-en.html. Everything goes through public CLIs;
+// all code stubs, findings, slices, and probes are strictly synthetic.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -13,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, '..', '..');
 const CLI = path.join(REPO, 'bin', 'pinwhy.js');
+const ULTRA_CLI = path.join(REPO, 'bin', 'pinwhy-ultra.js');
 const OUT = path.join(REPO, 'site', 'public', 'demo');
 
 const TEXT = {
@@ -62,6 +64,28 @@ const TEXT = {
     lblFilesAnswer: '递增 jobId 的导出产物可直接匿名读取',
     lblCondTrigger: '需同源会话触发脚本执行',
     lblCsrfCounter: 'SameSite=Strict 与 JSON Content-Type 限制跨站发送会话凭据',
+    ultra: {
+      excludeNote: '合成演示数据的静态初始化脚手架，无运行时路由入口',
+      notes: {
+        index: '已静态核对读/写路由挂载边界，adminReadRouter 缺少 requireAdminSession',
+        users: '已复核匿名 GET /api/v2/admin/users 响应，确认未绑定会话校验',
+        write: '已核对写路由全部挂载 requireAdminSession，匿名 POST 返回 403',
+        roles: '已核对 POST /roles 缺乏显式 CSRF token，但受 SameSite=Strict 与 JSON 解析约束',
+        exportRoute: '已确认 export handler 直接采用 query.tenantId，未比对会话租户',
+        upload: '已确认上传接受同源脚本 SVG，尚未见后台内联触发路径',
+        worker: '已核对异步导出使用递增 jobId 生成 /exports/*.csv 且缺少鉴权校验',
+        session: '已核对会话中间件：Cookie 设置 SameSite=Strict，强制 application/json',
+      },
+      probes: {
+        adminProbe: '实测匿名 GET /api/v2/admin/users 是否受读路由分组中间件拦截',
+        exportHeaderProbe: '验证导出响应头是否带 Content-Disposition: attachment',
+        billingReplayProbe: '待测账单优惠券接口在并发核销下的幂等性边界',
+      },
+      probeNotes: {
+        adminProbe: '已实测：未携带 Cookie 直接返回 200 及全量用户列表',
+        exportHeaderProbe: '已核对：导出响应头设置 Content-Disposition: attachment 且附带 nosniff',
+      },
+    },
   },
   en: {
     title: 'Internal API audit · demo',
@@ -109,16 +133,70 @@ const TEXT = {
     lblFilesAnswer: 'Sequential jobId CSV files are served without auth',
     lblCondTrigger: 'Requires same-origin admin navigation to trigger script',
     lblCsrfCounter: 'SameSite=Strict and JSON Content-Type block cross-site credentialed requests',
+    ultra: {
+      excludeNote: 'Synthetic demo fixture seeder; no runtime route handlers',
+      notes: {
+        index: 'Verified router mount boundary: adminReadRouter omits requireAdminSession',
+        users: 'Verified GET /api/v2/admin/users responds 200 anonymously without session cookie',
+        write: 'Verified adminWriteRouter enforces requireAdminSession and rejects anon POST with 403',
+        roles: 'Verified POST /roles skips explicit CSRF token, constrained by SameSite=Strict & JSON parser',
+        exportRoute: 'Confirmed export handler reads query.tenantId without comparing caller session tenant',
+        upload: 'Confirmed upload accepts same-origin SVG; no admin inline render trigger located',
+        worker: 'Confirmed sequential jobId outputs under /exports/*.csv lack authorization checks',
+        session: 'Verified session middleware enforces SameSite=Strict cookies and application/json bodies',
+      },
+      probes: {
+        adminProbe: 'Verify unauthenticated GET /api/v2/admin/users against read-group middleware',
+        exportHeaderProbe: 'Check Content-Disposition: attachment & nosniff headers on export downloads',
+        billingReplayProbe: 'Test billing coupon redemption idempotency under concurrent requests',
+      },
+      probeNotes: {
+        adminProbe: 'Observed 200 OK with full user directory returned without cookies',
+        exportHeaderProbe: 'Confirmed export responses send Content-Disposition: attachment with nosniff',
+      },
+    },
   },
 };
+
+function writeStub(rootDir, relPath, totalLines, headline) {
+  const full = path.join(rootDir, relPath);
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  const lines = [`// Synthetic demo source file: ${relPath}`, `// ${headline}`, ''];
+  while (lines.length < totalLines) {
+    const step = lines.length + 1;
+    lines.push(`export function syntheticStep${step}(input: Record<string, unknown>) { return input; }`);
+  }
+  fs.writeFileSync(full, `${lines.join('\n')}\n`, 'utf8');
+}
+
+function seedSyntheticSourceTree(dir) {
+  const files = [
+    ['src/routes/admin/index.ts', 42, 'Mount adminReadRouter and adminWriteRouter handlers'],
+    ['src/routes/admin/users.ts', 56, 'GET /api/v2/admin/users directory handler'],
+    ['src/routes/admin/write.ts', 34, 'POST /api/v2/admin/reset-password behind requireAdminSession'],
+    ['src/routes/admin/roles.ts', 48, 'POST /api/v2/admin/roles assignment endpoint'],
+    ['src/routes/admin/export.ts', 132, 'Export orders filtered by query.tenantId'],
+    ['src/routes/upload.ts', 98, 'Multipart asset & SVG upload endpoint'],
+    ['src/jobs/export-worker.ts', 76, 'Sequential jobId CSV output writer'],
+    ['src/middleware/session.ts', 32, 'SameSite=Strict session cookie and JSON guard'],
+    ['src/billing/invoice.ts', 46, 'Pending billing sweep target'],
+    ['src/webhooks/notify.ts', 42, 'Pending webhook verification target'],
+    ['scripts/seed-fixtures.ts', 32, 'Synthetic demo dataset helper'],
+  ];
+  for (const [rel, count, headline] of files) writeStub(dir, rel, count, headline);
+}
 
 export function createDemoDir(lang) {
   const T = TEXT[lang];
   if (!T) throw new Error(`Unsupported demo language: ${lang}`);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `pinwhy-site-demo-${lang}-`));
-  const bb = (...args) => execFileSync(process.execPath, [CLI, ...args, '--cwd', dir], {
+  seedSyntheticSourceTree(dir);
+
+  const runCli = (entry, ...args) => execFileSync(process.execPath, [entry, ...args, '--cwd', dir], {
     cwd: dir, env: { ...process.env, PINWHY_CWD: dir, PINWHY_QUIET: '1' }, encoding: 'utf8',
   }).trim();
+  const bb = (...args) => runCli(CLI, ...args);
+  const ultra = (...args) => runCli(ULTRA_CLI, ...args);
   const add = (kind, title, ...args) => JSON.parse(bb('node', 'add', kind, title, ...args, '--json')).node.id;
   const link = (a, b, rel, label, ...extra) => bb('link', a, b, '--rel', rel, ...(label ? ['--label', label] : []), ...extra);
 
@@ -175,7 +253,7 @@ export function createDemoDir(lang) {
   bb('cursor', qUpload, '--reason', T.cursorReason);
   bb('checkpoint', '--summary', T.cp1);
 
-  // Edits give the records a history; a second Agent cross-verifies fd1 and investigates CSRF on a side branch.
+  // Edits give the records a history; a second Agent cross-verifies fdAuth and investigates CSRF on a side branch.
   bb('edit', fdAuth, '--confidence', 'suspected');
   bb('edit', fdAuth, '--confidence', 'reproduced');
   bb('edit', hyAuth, '--status', 'confirmed');
@@ -187,7 +265,7 @@ export function createDemoDir(lang) {
 
   const hyCsrf = add('hypothesis', T.hyCsrf, ...R, '--at', 'src/routes/admin/roles.ts:31', '--enter');
   link(hyCsrf, goalAuth, 'answers', T.lblHyCsrfAnswer, ...R);
-  add('observation', T.obsCsrf, ...R, '--at', 'src/routes/admin/roles.ts:38', '--to', hyCsrf, '--rel', 'supports', '--tag', 'csrf');
+  const obsCsrf = add('observation', T.obsCsrf, ...R, '--at', 'src/routes/admin/roles.ts:38', '--to', hyCsrf, '--rel', 'supports', '--tag', 'csrf');
   const obsCsrfCookie = add('observation', T.obsCsrfCookie[0], '-d', T.obsCsrfCookie[1], '--at', 'src/middleware/session.ts:19', '--status', 'confirmed');
   link(obsCsrfCookie, hyCsrf, 'contradicts', T.lblCsrfCounter);
 
@@ -205,6 +283,29 @@ export function createDemoDir(lang) {
   link(fdFiles, condTenant, 'depends-on', T.lblCondTenant);
   link(qUpload, condTrigger, 'depends-on', T.lblCondTrigger);
 
+  // Populate the isolated Ultra slice & probe ledger (.pinwhy/ultra/ledger.jsonl).
+  const U = T.ultra;
+  const synced = JSON.parse(ultra('sync', '--json'));
+  const byPath = new Map(synced.snapshot.slices.map((s) => [s.path, s.id]));
+
+  ultra('exclude', byPath.get('scripts/seed-fixtures.ts'), '--note', U.excludeNote, '--json');
+  ultra('done', byPath.get('src/middleware/session.ts'), '--note', U.notes.session, '--refs', obsCsrfCookie, '--json');
+  ultra('done', byPath.get('src/routes/admin/index.ts'), '--note', U.notes.index, '--refs', `${hyAuth},${fRouter},${condAuth}`, '--json');
+  ultra('done', byPath.get('src/routes/admin/users.ts'), '--note', U.notes.users, '--depends-on', 'src/routes/admin/index.ts', '--refs', `${fdAuth},${obsUsers}`, '--json');
+  ultra('done', byPath.get('src/routes/admin/write.ts'), '--note', U.notes.write, '--depends-on', 'src/routes/admin/index.ts', '--refs', obsWrite, '--status', 'cleared', '--json');
+  ultra('done', byPath.get('src/routes/admin/roles.ts'), '--note', U.notes.roles, '--depends-on', 'src/middleware/session.ts', '--refs', `${hyCsrf},${obsCsrf}`, '--json');
+  ultra('done', byPath.get('src/routes/admin/export.ts'), '--note', U.notes.exportRoute, '--depends-on', 'src/middleware/session.ts', '--refs', `${fdExport},${obsExport},${condTenant}`, '--json');
+  ultra('done', byPath.get('src/routes/upload.ts'), '--note', U.notes.upload, '--refs', `${qUpload},${obsSvg},${counter},${condTrigger}`, '--json');
+  ultra('done', byPath.get('src/jobs/export-worker.ts'), '--note', U.notes.worker, '--depends-on', 'src/routes/admin/export.ts', '--refs', `${fdFiles},${hyFiles},${obsJob}`, '--json');
+
+  const p1 = JSON.parse(ultra('add', U.probes.adminProbe, '--sector', 'src/routes', '--at', 'src/routes/admin/users.ts:42', '--depends-on', 'src/routes/admin/index.ts', '--json')).added[0].id;
+  ultra('done', p1, '--note', U.probeNotes.adminProbe, '--refs', `${fdAuth},${obsUsers}`, '--json');
+
+  const p2 = JSON.parse(ultra('add', U.probes.exportHeaderProbe, '--sector', 'src/jobs', '--at', 'src/jobs/export-worker.ts:64', '--depends-on', 'src/routes/admin/export.ts', '--json')).added[0].id;
+  ultra('done', p2, '--note', U.probeNotes.exportHeaderProbe, '--status', 'cleared', '--json');
+
+  ultra('add', U.probes.billingReplayProbe, '--sector', 'src/billing', '--at', 'src/billing/invoice.ts:12', '--json');
+
   bb('checkpoint', '--summary', T.cp2, ...R);
   return { dir, bb };
 }
@@ -216,6 +317,7 @@ function build(lang) {
     bb('export', '--out', out);
     const html = fs.readFileSync(out, 'utf8');
     if (html.includes(os.homedir()) || html.includes(dir)) throw new Error(`${out} contains a local path`);
+    if (!html.includes('window.__PINWHY_ULTRA__')) throw new Error(`${out} is missing Ultra snapshot payload`);
     console.log(`exported ${path.relative(REPO, out)} (${(html.length / 1024 / 1024).toFixed(2)} MB)`);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });

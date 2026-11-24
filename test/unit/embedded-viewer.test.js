@@ -1,22 +1,13 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { execFileSync } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { openWebModules } from '../helpers/load-web-module.mjs';
 
-const root = fileURLToPath(new URL('../../', import.meta.url));
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinwhy-embedded-test-'));
-after(() => fs.rmSync(dir, { recursive: true, force: true }));
-execFileSync(process.execPath, [path.join(root, 'node_modules/typescript/bin/tsc'),
-  '--target', 'ES2022', '--module', 'ESNext', '--moduleResolution', 'Bundler', '--skipLibCheck', '--outDir', dir,
-  path.join(root, 'web/src/api/embedded.ts')], { cwd: dir });
-fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ type: 'module' }));
+const web = await openWebModules();
+after(() => web.close());
 const {
   readPresentation, hostAppearance, hostNavigate, hostReferenceResult, onParentMessage,
   applyEmbedFonts, parentOrigin, referenceRequest, NO_FONTS,
-} = await import(pathToFileURL(path.join(dir, 'embedded.js')).href);
+} = await web.load('/src/api/embedded.ts');
 
 test('only an embedded page takes appearance, language, type and reference from the host URL', () => {
   const standalone = { embedded: false, appearance: null, locale: null, fonts: NO_FONTS, reference: false };

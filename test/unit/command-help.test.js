@@ -54,6 +54,9 @@ test('leaf options distinguish values, switches and repeatable fields', () => {
   assert.match(commandHelp('node add'), /--tag\s+<[^>]+>.*repeatable/);
   assert.match(commandHelp('ls'), /--status\s+<[^>]+>/);
   assert.match(commandHelp('ls'), /--confidence\s+<[^>]+>/);
+  assert.match(commandHelp('search'), /--type\s+<[^>]+>.*repeatable/);
+  assert.match(commandHelp('ls'), /--type\s+<[^>]+>.*repeatable/);
+  assert.match(commandHelp('export'), /--type\s+<[^>]+>.*repeatable/);
 });
 
 

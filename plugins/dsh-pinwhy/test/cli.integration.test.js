@@ -52,6 +52,19 @@ test('real pinwhy-cli wrapper: all tools, two boards/identities, replay, read-on
   const checkpoint = (await call('checkpoint', { summary: 'Known facts; current focus; open questions' })).data;
   assert.equal(checkpoint.agentId, 'dsh:main');
   assert.equal((await call('context', { since: checkpoint.id })).data.request.sinceSource, `checkpoint:${checkpoint.id}`);
+  const linked = (await call('node_add', {
+    type: 'observation', title: 'Multi-target observation', to: [n1.id, n2.id], relation: 'supports',
+    label: 'Covers both claims', tags: ['temp-tag'], requestId: 'req-dsh-multi',
+  })).data;
+  assert.equal(linked.edges.length, 2);
+  await call('node_patch', { id: linked.node.id, tags: [], clear: ['status'] });
+  const patched = (await call('node_get', { id: linked.node.id })).data.node;
+  assert.deepEqual(patched.tags, []);
+  const grouped = (await call('search', { types: ['observation', 'custom-research'], groupBy: 'severity' })).data;
+  assert.equal(grouped.total, 3);
+  assert.ok(Array.isArray(grouped.groups) && grouped.groups.length >= 1);
+  assert.equal((await call('context', { depth: 1, asOf: checkpoint.id })).data.board.stats.total, 2);
+  assert.equal((await call('node_get', { id: n1.id, asOf: checkpoint.id })).data.node.id, n1.id);
   const events = path.join(a, '.pinwhy/events.jsonl');
   const before = createHash('sha256').update(await fs.readFile(events)).digest('hex');
   const state = path.join(a, '.pinwhy/state.json'); await fs.rm(state);
@@ -59,7 +72,7 @@ test('real pinwhy-cli wrapper: all tools, two boards/identities, replay, read-on
   assert.deepEqual(context.policy, { readOnly: true, prescriptive: false, nextStepSelection: 'agent-controlled' });
   assert.equal(context.currentFocus.id, n1.id);
   assert.equal(createHash('sha256').update(await fs.readFile(events)).digest('hex'), before);
-  const status = await call('status', {}); assert.equal(status.data.stats.total, 2);
+  const status = await call('status', {}); assert.equal(status.data.stats.total, 3);
   await call('cursor', { id: 'none' }); assert.equal((await call('context', {})).data.currentFocus, null);
   const provider = skillProvider(bridge, 600), [candidate] = await provider.list(), skill = await provider.get(candidate);
   assert.equal(candidate.resourceBase.path, await fs.realpath(runtime.resources.skill));

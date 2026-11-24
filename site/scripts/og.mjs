@@ -14,8 +14,16 @@ const nm = (p) => pathToFileURL(path.join(SITE, 'node_modules', p)).href;
 const pub = (p) => pathToFileURL(path.join(SITE, 'public', p)).href;
 
 const COPY = {
-  zh: { tag: 'Agent 的外置记忆与可视化工作台', sub: '上下文压缩或换会话之后，按预算读回关键判断、证据与现场。', meta: ['零运行时依赖', 'MIT 开源', '数据留在本机'] },
-  en: { tag: 'External memory & workspace for AI agents', sub: 'After compaction or a new session — read back judgments, evidence, and cursors within budget.', meta: ['Zero dependencies', 'MIT licensed', 'Data stays local'] },
+  zh: {
+    tag: '面向 AI Agent 的本地状态记录工具与可视化工作台',
+    sub: '把目标、假设、正反证据与检查点写入本地事件日志，按预算恢复现场，在通用、审计与 Ultra 工作台中核对。',
+    meta: ['零运行时依赖', '三套阅读视图', '数据留在本机'],
+  },
+  en: {
+    tag: 'Local state recorder and visual workspace for AI agents',
+    sub: 'Record goals, hypotheses, evidence, and checkpoints locally — restore within budget and review across General, Audit & Ultra views.',
+    meta: ['Zero dependencies', 'General · Audit · Ultra', 'Data stays local'],
+  },
 };
 
 const html = (lang) => `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><style>

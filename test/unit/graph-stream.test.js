@@ -1,28 +1,12 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { execFileSync } from 'node:child_process';
 import { setImmediate as flush } from 'node:timers/promises';
+import { openWebModules } from '../helpers/load-web-module.mjs';
 
-// Compile the controller using the same portable Node 18+ pattern as the viewer tests.
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pinwhy-graph-stream-'));
-after(() => fs.rmSync(dir, { recursive: true, force: true }));
-const root = fileURLToPath(new URL('../../', import.meta.url));
-execFileSync(process.execPath, [path.join(root, 'node_modules/typescript/bin/tsc'), '--target', 'ES2022', '--module', 'ESNext', '--moduleResolution', 'Bundler', '--skipLibCheck', '--outDir', dir, path.join(root, 'web/src/api/graph-stream.ts')], { cwd: dir });
-function resolveModuleExtensions(directory) {
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const p = path.join(directory, entry.name);
-    if (entry.isDirectory()) resolveModuleExtensions(p);
-    else if (entry.name.endsWith('.js')) fs.writeFileSync(p, fs.readFileSync(p, 'utf8').replace(/from '(\.\.?\/[^']+)'/g, (_all, name) => `from '${name}.js'`));
-  }
-}
-resolveModuleExtensions(dir);
-fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ type: 'module' }));
-const { createGraphSubscription } = await import(pathToFileURL(path.join(dir, 'api/graph-stream.js')).href);
-const { t: translate } = await import(pathToFileURL(path.join(dir, 'i18n.js')).href);
+const web = await openWebModules();
+after(() => web.close());
+const { createGraphSubscription } = await web.load('/src/api/graph-stream.ts');
+const { t: translate } = await web.load('/src/i18n.ts');
 
 function deferred() {
   let resolve, reject;

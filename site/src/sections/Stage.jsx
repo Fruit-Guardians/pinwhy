@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Box, FileCheck2, ListTree, ScanSearch, Waypoints } from 'lucide-react';
+import { Box, FileCheck2, ListTree, Orbit, ScanSearch, Waypoints } from 'lucide-react';
 import { useSiteTheme } from '@/lib/theme';
 import { useLang } from '../i18n.jsx';
 import WorkspaceFrame, { WORKSPACE_URLS } from '../components/WorkspaceFrame.jsx';
 
-const TAB_IDS = ['context', 'audit', 'logic', 'all', 'board'];
-const TAB_ICON = { context: ScanSearch, audit: FileCheck2, logic: Waypoints, all: ListTree, board: Box };
+const TAB_IDS = ['context', 'audit', 'ultra', 'logic', 'all', 'board'];
+const TAB_ICON = { context: ScanSearch, audit: FileCheck2, ultra: Orbit, logic: Waypoints, all: ListTree, board: Box };
 
 export default function Stage() {
   const { t, lang } = useLang();

@@ -27,6 +27,13 @@ export function getActiveLocalRoles(
   ));
 }
 
+/**
+ * Plan visible dossier branches and participating actors in one pass.
+ * A shared support or premise card may appear under multiple parents, but its local
+ * contradictions/conditions attach only to the first visible card occurrence (`localBranchContexts`)
+ * so DossierWings, actor spotlight, and `fallbackLocal` (used only when the selected node has no
+ * visible host card) share one deduplicated ownership rule.
+ */
 export function computeDossierDisplayMeta(
   audit: AuditSelection,
   rootId: string,

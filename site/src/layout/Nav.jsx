@@ -4,6 +4,7 @@ import { switchThemeWithReveal } from '../lib/themeReveal.js';
 import { useLang } from '../i18n.jsx';
 import { siteTargetHref } from '../routes.mjs';
 import { routeUrl, useRoute } from '../router.jsx';
+import { VERSION } from '../locales/shared.jsx';
 import { Icon, REPO, isModifiedClick, scrollToId } from '../shared.jsx';
 
 function usePopover() {
@@ -139,7 +140,7 @@ export function Nav() {
         <a className="nav-brand" href={routeUrl('home', lang)} onClick={handleNav('home')} aria-label="Pinwhy Home">
           <img src="/mark.svg" alt="" />
           <b>Pinwhy</b>
-          <span className="ver">v0.2.0</span>
+          <span className="ver">{`v${VERSION}`}</span>
         </a>
 
         <nav className="nav-links" aria-label="primary">

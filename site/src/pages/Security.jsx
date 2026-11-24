@@ -1,17 +1,34 @@
 import { useState } from 'react';
-import { Bug, CheckCircle2, FileCheck, FileCode, GitFork, Link2, Lock, Shield, ShieldAlert, Terminal } from 'lucide-react';
+import {
+  Bug,
+  CheckCircle2,
+  Database,
+  FileCheck,
+  FileCode,
+  GitFork,
+  Link2,
+  Lock,
+  Orbit,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  Terminal,
+  Users,
+} from 'lucide-react';
 import WorkspaceFrame, { WORKSPACE_URLS } from '../components/WorkspaceFrame.jsx';
 import { CtaBand } from '../sections/Finale.jsx';
 import { useT } from '../i18n.jsx';
 import { Icon, REPO, useCopyPrompt } from '../shared.jsx';
 
-const CARD_ICONS = [GitFork, Bug, Link2, ShieldAlert];
+const AUDIT_CARD_ICONS = [GitFork, Bug, Link2, ShieldAlert];
+const ULTRA_CARD_ICONS = [Database, Orbit, Users, ShieldCheck];
 
 export default function SecurityPage() {
   const t = useT();
   const S = t.securityPage;
   const copyPrompt = useCopyPrompt();
   const [live, setLive] = useState(false);
+  const [ultraLive, setUltraLive] = useState(false);
 
   return (
     <div className="security-page">
@@ -53,6 +70,15 @@ export default function SecurityPage() {
             >
               <Shield size={15} aria-hidden="true" />
               <span>{S.scenarioBtn}</span>
+            </a>
+            <a
+              className="btn btn-secondary btn-lg"
+              href={`${REPO}/blob/main/skills/pinwhy-ultra/SKILL.md`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Orbit size={15} aria-hidden="true" />
+              <span>{S.ultraBtn}</span>
             </a>
           </div>
         </div>
@@ -106,7 +132,49 @@ export default function SecurityPage() {
 
           <div className="grid-2">
             {S.workspaceSection.cards.map((card, idx) => {
-              const CardIcon = CARD_ICONS[idx] || Shield;
+              const CardIcon = AUDIT_CARD_ICONS[idx] || Shield;
+              return (
+                <article key={card.title} className="card sub-card rv" style={{ '--d': `${(idx % 2) * 0.05}s` }}>
+                  <div className="sub-card-meta">
+                    <div className="sub-card-type">
+                      <span className="sub-card-ic"><CardIcon size={16} aria-hidden="true" /></span>
+                      <span className="sub-card-pill">{card.type}</span>
+                    </div>
+                    <span className="sub-card-tag">{card.tag}</span>
+                  </div>
+                  <h3>{card.title}</h3>
+                  <p>{card.desc}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="section" id="ultra" aria-labelledby="ultra-title">
+        <div className="wrap">
+          <div className="head rv">
+            <div className="kicker">{S.ultraSection.kicker}</div>
+            <h2 className="h2" id="ultra-title">{S.ultraSection.title}</h2>
+            <p className="lead">{S.ultraSection.lead}</p>
+          </div>
+
+          <div className="stage-frame rv mb-8">
+            <div className="stage">
+              <div className="stage-bar">
+                <span className="dots"><i /><i /><i /></span>
+                <span className="url"><i className="lock" />127.0.0.1:4333<em>/?{WORKSPACE_URLS.ultra}</em></span>
+                <span className="demo-badge">{t.stage.badge}</span>
+              </div>
+              <div className="stage-body">
+                <WorkspaceFrame view="ultra" live={ultraLive} onLive={() => setUltraLive(true)} />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid-2">
+            {S.ultraSection.cards.map((card, idx) => {
+              const CardIcon = ULTRA_CARD_ICONS[idx] || Orbit;
               return (
                 <article key={card.title} className="card sub-card rv" style={{ '--d': `${(idx % 2) * 0.05}s` }}>
                   <div className="sub-card-meta">
@@ -160,6 +228,10 @@ export default function SecurityPage() {
             </a>
             <a className="btn btn-secondary btn-lg" href={`${REPO}/tree/main/skills/pinwhy-code-audit`} target="_blank" rel="noreferrer">
               <span>{S.bottomCta.scenarioLink}</span>
+              <Icon.arrow size={15} />
+            </a>
+            <a className="btn btn-secondary btn-lg" href={`${REPO}/blob/main/skills/pinwhy-ultra/SKILL.md`} target="_blank" rel="noreferrer">
+              <span>{S.bottomCta.ultraLink}</span>
               <Icon.arrow size={15} />
             </a>
           </>

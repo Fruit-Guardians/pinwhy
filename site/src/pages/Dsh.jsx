@@ -163,7 +163,7 @@ export default function DshPage() {
                       <code><Shell text={st.cmd} /></code>
                       <span className="cli-cmd-copy">
                         {copiedId === st.n ? <Icon.check size={13} /> : <Icon.copy size={13} />}
-                        <span>{D.installSection.copyHint}</span>
+                        <span>{copiedId === st.n ? D.installSection.copied : D.installSection.copyHint}</span>
                       </span>
                     </button>
                   )}

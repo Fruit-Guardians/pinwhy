@@ -95,12 +95,14 @@ pinwhy show "<节点ID或唯一前缀>" --cwd "/已确认项目"
 
 ```sh
 pinwhy search "session cookie" --json --cwd "/已确认项目"
+pinwhy search --type finding,vuln,hypothesis --sev high --json --cwd "/已确认项目"
 pinwhy search --type vuln --sev high --confidence reproduced --json --cwd "/已确认项目"
 pinwhy search --tag site=alpha.example --tag auth --group-by severity,status --cwd "/已确认项目"
 pinwhy search --type vuln --group-by tag:site,severity,status --limit 1 --json --cwd "/已确认项目"
 ```
 
 - 关键词按字面量匹配；`--type`、`--status`、`--sev`、`--confidence`、可重复的 `--tag` 和 `--rel` / `--related-to` 可组合，取交集。未填状态不等于 `open`；只读查询不推断或更改节点。
+- `--type` 支持单个类型或逗号分隔/重复传入多个类型（如 `--type finding,vuln,hypothesis` 或 `--type finding --type vuln`，同一节点匹配任一请求类型即可，在 `search`、`ls` 和报告 `export` 中通用，声明于 `features.multiTypeFilter`）；空白或空片段会报错。
 - `total` 是全部匹配数，`items` 是最多 `--limit` 条明细（默认 30，上限 1000），`truncated` 表示明细是否截断。不要根据 `items.length` 统计全部结果。
 - `--group-by` 支持 `severity`、`status`、`tag:<键>`，可用逗号组合。JSON 的 `groups` 每项为 `{values: {...}, count}`，覆盖全部匹配，不受 `--limit` 影响；缺省值独立列为 `null`。文本模式只列总数和全部分组。
 - 站点显式记录为 `--tag site=alpha.example`；`tag:site` 只读这个约定，不猜正文或裸域名标签。一个节点有多个站点标签时，每站各计一次，不代表多条独立发现。

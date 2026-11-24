@@ -198,5 +198,5 @@ html[data-motion="reduced"]::view-transition-new(*) { animation: none !important
 
 /* ---- Host embedding --------------------------------------------------- */
 /* Tailwind inlines its font stacks, so a host preference wins by specificity, not by being later. */
-html[data-embed-code-font] :is(.font-mono, code, pre) { font-family: var(--pinwhy-code-font); }
-html[data-embed-code-size] :is(.font-mono, code, pre) { font-size: var(--pinwhy-code-size); }
+html[data-embed-code-font] :is(.font-mono, .ultra-mono, code, pre) { font-family: var(--pinwhy-code-font); }
+html[data-embed-code-size] :is(.font-mono, .ultra-mono:not(svg text), code, pre) { font-size: var(--pinwhy-code-size); }
