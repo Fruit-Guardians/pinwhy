@@ -82,6 +82,7 @@ export function EditSection({ node, onReload }: { node: BoardNode; onReload: () 
   const { draft, busy: pending, locked, error, change, discard, save, reloadDraft, reload, remove, startEditing } = useNodeEdit(node, onReload);
   const busy = pending || locked;
   const [confirming, setConfirming] = useState(false);
+  const type = draft.fields.type ?? node.type;
   const title = draft.fields.title ?? node.title;
   const detail = draft.fields.detail ?? node.detail ?? '';
 
@@ -90,7 +91,10 @@ export function EditSection({ node, onReload }: { node: BoardNode; onReload: () 
       <h3 className="m-0 text-xs font-medium text-muted-foreground">{t('edit.heading')}</h3>
       {draft.editing ? (
         <form className="flex flex-col gap-2" onSubmit={save}>
-          <input aria-label={t('edit.title')} aria-invalid={draft.conflictFields?.includes('title') || undefined} className={cn(field, 'h-8')} value={title} onChange={(e) => change('title', e.target.value)} disabled={busy} autoFocus />
+          <div className="flex gap-2">
+            <TypePicker value={type} disabled={busy} onChange={(value) => change('type', value)} />
+            <input aria-label={t('edit.title')} aria-invalid={draft.conflictFields?.includes('title') || undefined} className={cn(field, 'h-8 min-w-0 flex-1')} value={title} onChange={(e) => change('title', e.target.value)} disabled={busy} autoFocus />
+          </div>
           <textarea aria-label={t('edit.detail')} aria-invalid={draft.conflictFields?.includes('detail') || undefined} className={cn(field, 'min-h-24 py-1.5 leading-5')} value={detail} onChange={(e) => change('detail', e.target.value)} disabled={busy} placeholder={t('edit.detailPlaceholder')} />
           <TagFields value={draft.fields.tags ?? JSON.stringify(Array.isArray(node.tags) ? node.tags : [])} onChange={(value) => change('tags', value)} disabled={busy} invalid={draft.conflictFields?.includes('tags')} />
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">{t('edit.at')}
@@ -99,7 +103,7 @@ export function EditSection({ node, onReload }: { node: BoardNode; onReload: () 
           <DimensionSelects values={{ status: draft.fields.status ?? node.status ?? '', severity: draft.fields.severity ?? node.severity ?? '', confidence: draft.fields.confidence ?? node.confidence ?? '' }} disabled={busy} conflictFields={draft.conflictFields} onChange={change} />
           <p className="m-0 text-[11px] text-muted-foreground">{t('edit.draftHint')}</p>
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" variant="default" size="sm" disabled={busy || !title.trim() || draft.conflict}>{t('edit.save')}</Button>
+            <Button type="submit" variant="default" size="sm" disabled={busy || !title.trim() || !type.trim() || draft.conflict}>{t('edit.save')}</Button>
             <Button type="button" size="sm" disabled={busy} onClick={discard}>{t('edit.discard')}</Button>
           </div>
           {draft.conflict && (

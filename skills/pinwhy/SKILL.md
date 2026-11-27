@@ -55,10 +55,11 @@ pinwhy status --cwd "/已确认项目"
 
 ```sh
 pinwhy search "关键词" --json --cwd "/已确认项目"
+pinwhy search --type vuln --exclude-status refuted,superseded,dead --json --cwd "/已确认项目"
 pinwhy search --type vuln --group-by severity,status --cwd "/已确认项目"
 ```
 
-使用新筛选/分组前可读取 `capabilities --json` 的 `features.searchFilters` / `features.searchGrouping`；旧版本没有这些字段时不要使用新选项。读取 JSON 的 `total` 和 `truncated`，不要把返回的明细当作全部记录。
+使用新筛选/分组前可读取 `capabilities --json` 的 `features.searchFilters`、`features.excludeStatusFilter`、`features.searchGrouping`；旧版本没有这些字段时不要使用新选项。读取 JSON 的 `total` 和 `truncated`，不要把返回的明细当作全部记录。
 
 节点 JSON 的 status/severity/confidence 未记录时为 `null`，不能解释成 open 或已确认。`features.nodeJsonDefaults` 声明此能力，具体 schema 读 `capabilities.outputs`；`receipt.result` 保留原始写入形状。需要交付记录时，按 `capabilities.exportFormats` 选择 Markdown、Mermaid 或 SARIF，见[报告导出](references/recording.md#报告导出)，不凭空补证据或位置。
 
@@ -99,8 +100,8 @@ pinwhy goal "审计 某库@1.2.3 的解析边界" --detail "源码：实际路�
 - 长任务或分波次的并行工作，在每一波结束时写下本波的关键判断和证据，再打检查点。检查点回显会列出自上一检查点以来的节点和关系变化；全为 0 就是这段时间没有新增记录。一次要记多条相关记录时，可用 `batch` 一条命令写入（见[并行 Agent](references/parallel-agents.md#多个子-agent-同时工作)）。
 - 不把每次命令、读取、成功提示或原始输出写成逻辑节点。工具活动默认不采集；显式启用后仍是独立活动层，不自动成为事实。
 - 一个节点表达一个主要判断。标题只写这个判断本身，控制在约 80 字内；证据、文件位置、条件和过程放 `--detail`。标题不复述其他节点的结论（如“hy1 被反驳”）：节点之间的关系用边表达，状态用 `--status`。
-- 未验证的 finding/vuln 候选用 `suspected`；已有静态核对证据可直接用 `static-confirmed`，真实复现后才用 `reproduced`，不要求依次升级。严重度、状态和可信度相互独立。
-- 关系读作 “from relation to”：证据 `supports` 或 `contradicts` 论断；若从已有证据新建结论并一并连边，应写 `--to <证据ID> --rel derived-from`（因为 `--to` 把新节点放在左侧，勿写反为 `supports`）。创建时已知新节点属于哪个目标或问题时，用 `--to <目标ID>`（或 `--to <问题ID> --rel answers`）连上，不要只挂在 `start` 上；反驳用 `contradicts`（不用 `refutes`），回答问题用 `answers`（不用 `responds-to`），这样 `lint` 与审计模式才能准确识别。不确定关系时不连，不为消除孤立节点补边。有足够证据推翻时才将旧论断设为 `refuted`（不要因反证已复现就把被反驳节点标成 `reproduced`）。新结论确实取代旧结论时才用 `supersedes` 和 `superseded`；反驳不等于取代。
+- 未验证的 finding/vuln 候选用 `suspected`；已有静态核对证据可直接用 `static-confirmed`，真实复现后才用 `reproduced`，不要求依次升级。已核实的 `fact`/`observation`/`result` 加 `--status confirmed`，便于恢复时进入 `confirmedFacts`。猜测 `hypothesis` 证实为结论（或初判 `finding`/`vuln` 复核后退回普通 `observation`/`note`）时，在 `features.editType` 下可用 `pinwhy edit "<节点ID>" --type <新类型>` 原地演进类型并保留原有连边。严重度、状态和可信度相互独立。
+- **归属与连边方向分开**：关系读作 “from relation to”。创建任何节点挂靠已知目标时，用 `--to "<目标ID>"`（省略 `--rel` 即默认 `related-to`，**切勿对 `goal` 写 `--rel derived-from`**）；回答问题用 `--to "<问题ID>" --rel answers`（不用 `responds-to`），不要只挂在 `start` 上。连接证据与论断时：证据 `supports` 或 `contradicts` 论断（不用 `refutes`）；仅当从已有证据新建结论并一并连向该证据时，才写 `--to "<证据ID>" --rel derived-from`（因为 `--to` 把新节点放在左侧，勿写反为 `supports`）。不确定关系时不连，不为消除孤立节点补边。有足够证据推翻时才将旧论断设为 `refuted`（不要因反证已复现就把被反驳节点标成 `reproduced`）。新结论确实取代旧结论时才用 `supersedes` 和 `superseded`；反驳不等于取代。
 
 ## 按需读取参考
 

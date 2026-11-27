@@ -142,6 +142,29 @@ test('high-fanout hub cursor with dense Chinese details preserves open threads, 
   assert.deepEqual(graph, before);
 });
 
+test('many unclosed goals and long checkpoints do not starve focused neighborhood or findings', () => {
+  const graph = emptyGraph();
+  const goalDetail = '阶段范围与前置条件说明：仅核对当前模块接口边界与会话状态。'.repeat(6);
+  for (let i = 1; i <= 8; i++) {
+    graph.nodes[`g${i}`] = { id: `g${i}`, type: 'goal', title: `阶段审计目标 ${i}`, detail: goalDetail, status: 'active', ts: i };
+  }
+  graph.checkpoints.cp1 = { id: 'cp1', agentId: 'agent:primary', at: 90, summary: '阶段检查点摘要一：'.repeat(25) };
+  graph.checkpoints.cp2 = { id: 'cp2', agentId: 'agent:primary', at: 91, summary: '阶段检查点摘要二：'.repeat(25) };
+  graph.nodes.q1 = { id: 'q1', type: 'question', title: '当前聚焦的待确认边界问题', detail: '等待验证上游响应', status: 'open', ts: 95 };
+  graph.nodes.f1 = { id: 'f1', type: 'fact', title: '直接关联的一跳证据观察', detail: '已观察到静态路由回退', status: 'confirmed', ts: 96 };
+  graph.nodes.v1 = { id: 'v1', type: 'vuln', title: '当前已复现的关键发现', detail: '复现条件与限制说明', severity: 'high', confidence: 'reproduced', ts: 97 };
+  graph.edges['q1->g3'] = { id: 'q1->g3', from: 'q1', to: 'g3', kind: 'related-to', ts: 96 };
+  graph.edges['f1->q1'] = { id: 'f1->q1', from: 'f1', to: 'q1', kind: 'supports', ts: 96 };
+  graph.cursors['agent:primary'] = { id: 'c1', agentId: 'agent:primary', to: 'q1', at: 98 };
+
+  const packet = buildAgentContext(graph, { budgetTokens: 4000 });
+  assertBudget(packet, 4000);
+  assert.equal(packet.currentFocus?.id, 'q1');
+  assert.ok(packet.objectives.some((node) => node.id === 'g3'), 'goal linked to focus is prioritized');
+  assert.ok(packet.neighborhood.some((entry) => entry.node.id === 'f1'), 'focused 1-hop neighbor is not starved');
+  assert.ok(packet.findings.some((node) => node.id === 'v1'), 'findings are not starved by accumulated goals');
+});
+
 test('generous budgets backfill duplicate collection views across focus, objectives, findings and neighborhood', () => {
   const graph = emptyGraph();
   graph.nodes.g1 = { id: 'g1', type: 'goal', title: 'Primary goal', status: 'active', ts: 1 };

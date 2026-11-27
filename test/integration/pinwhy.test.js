@@ -1085,11 +1085,12 @@ test('lint evidence follows "from <kind> to": derived-from outgoing counts, inco
   const dir = fixture(t);
   const obs = addNode({ type: 'observation', title: 'obs' }, dir).node;
   const f1 = addNode({ type: 'finding', title: 'derived finding' }, dir).node;
-  const f2 = addNode({ type: 'finding', title: 'cause-only finding' }, dir).node;
+  const f2 = addNode({ type: 'finding', title: 'cause-only finding', detail: 'Inline evidence note' }, dir).node;
   addEdge({ from: f1.id, to: obs.id, kind: 'derived-from' }, dir);
   addEdge({ from: obs.id, to: f2.id, kind: 'caused-by' }, dir);
   const unsupported = lintGraph(replay(dir)).issues.find((i) => i.code === 'unsupported-conclusions');
   assert.deepEqual(unsupported.nodeIds, [f2.id]);
+  assert.equal(unsupported.level, 'info', 'inline detail without explicit evidence edges stays info');
 });
 
 test('lint exposes audit handoff drift without changing the graph', (t) => {
@@ -1124,6 +1125,7 @@ test('lint hints at reversed evidence direction and near-synonym relation names 
 
   addEdge({ from: fBad.id, to: obs.id, kind: 'supports' }, dir);
   addEdge({ from: fBad.id, to: start.id, kind: 'supports' }, dir);
+  addEdge({ from: obs.id, to: q.id, kind: 'derived-from' }, dir);
   addEdge({ from: fGood.id, to: obs.id, kind: 'derived-from' }, dir);
   addEdge({ from: obs.id, to: fAlias.id, kind: 'supports' }, dir);
   addEdge({ from: counter.id, to: fAlias.id, kind: 'refutes' }, dir);
@@ -1134,8 +1136,8 @@ test('lint hints at reversed evidence direction and near-synonym relation names 
   const report = lintGraph(replay(dir));
   const reversed = report.issues.find((item) => item.code === 'reversed-evidence-direction');
   assert.equal(reversed?.level, 'info');
-  assert.equal(reversed?.count, 2);
-  assert.deepEqual(reversed?.nodeIds, [fBad.id]);
+  assert.equal(reversed?.count, 3);
+  assert.deepEqual(reversed?.nodeIds, [fBad.id, obs.id]);
 
   const aliases = report.issues.find((item) => item.code === 'relation-aliases');
   assert.equal(aliases?.level, 'info');
@@ -1526,11 +1528,13 @@ test('conditional viewer edits preserve disjoint updates and reject stale fields
   assert.deepEqual(await stale.json(), { error: 'node_conflict', fields: ['detail'] });
   assert.equal(fs.readFileSync(paths(dir).events, 'utf8'), before);
   const accepted = await call('PATCH', `/api/nodes/${node.id}`, {
-    body: { detail: 'human draft', expected: { detail: 'Agent detail' } },
+    body: { type: 'finding', detail: 'human draft', expected: { type: 'note', detail: 'Agent detail' } },
   });
   assert.equal(accepted.status, 200);
+  assert.equal(replay(dir).nodes[node.id].type, 'finding');
   assert.equal(replay(dir).nodes[node.id].title, 'Agent title');
   assert.equal(replay(dir).nodes[node.id].detail, 'human draft');
+  assert.equal((await call('PATCH', `/api/nodes/${node.id}`, { body: { type: '  ' } })).status, 400);
   for (const expected of [null, [], { title: 1 }, { status: 'open' }]) {
     const invalid = await call('PATCH', `/api/nodes/${node.id}`, { body: { title: 'invalid update', expected } });
     assert.equal(invalid.status, 400);

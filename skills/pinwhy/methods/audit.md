@@ -17,7 +17,7 @@ metadata:
 - 开放问题只表达一个可独立结束的验证事项；剩余方向相互独立时分别建问题，并关联已知目标或上游判断。
 - hypothesis 保存待核对解释；fact/observation/result 保存实际检查到的内容与可复核条件，不能用拟执行的实验冒充已观测结果。
 - finding/vuln 可先记录未验证候选，可信度用 `suspected`；已有静态核对证据可直接标 `static-confirmed`，真实复现后才标 `reproduced`，不要求依次升级。漏洞严重度与可信度分开，源码推导不是端到端复现；仅完成部分环节（如仅绕过服务端校验而端到端未闭环）时不要直接把整体利用标成 `reproduced`。
-- 复审中排除为“业务设计如此”“测试环境行为”等非漏洞项时，将原候选设为 `--status deferred`（或 `refuted` 并附反证）并在 `--tag`（如 `by-design`、`env`）与 `--detail` 中写明理由，不要用括号前缀改写标题，也不要把复审总表写成一条伪 `finding` 节点。
+- 复审中排除为“业务设计如此”“测试环境行为”等非漏洞项时，将原候选设为 `--status deferred`（或 `refuted` 并附反证；若只是普通背景观察，也可在 `features.editType` 下用 `edit <ID> --type observation` 或 `note` 调整类型）并在 `--tag`（如 `by-design`、`env`）与 `--detail` 中写明理由，不要用括号前缀改写标题，也不要把复审总表写成一条伪 `finding` 节点。
 - 候选需要进入审计模式视图或归属目标时，连向 `goal`/`question`（用 `answers`、`related-to`、`refines` 或标签 `issue=<ID>`），不要只连向 `start` 或使用非标准关系 `responds-to`。
 - 已核实的 fact/observation/result 可用 `--status confirmed`，有利于恢复确认事实；这不隐式证明相关漏洞结论。
 - 游标是当前实际研究位置，不是“最重要漏洞”的书签。方向切换时显式移动到正在继续的问题；无需因为某结论严重而一直停在已收束节点。

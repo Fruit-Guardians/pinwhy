@@ -51,12 +51,16 @@ test('leaf options distinguish values, switches and repeatable fields', () => {
   assert.match(commandHelp('release install'), /--force(?:\s|$)/);
   assert.doesNotMatch(commandHelp('release use').split('Examples')[0], /--force/);
   assert.match(commandHelp('edit'), /--clear\s+<[^>]+>.*repeatable/);
+  assert.match(commandHelp('edit'), /--type\s+<[^>]+>/);
   assert.match(commandHelp('node add'), /--tag\s+<[^>]+>.*repeatable/);
   assert.match(commandHelp('ls'), /--status\s+<[^>]+>/);
+  assert.match(commandHelp('ls'), /--exclude-status\s+<[^>]+>.*repeatable/);
   assert.match(commandHelp('ls'), /--confidence\s+<[^>]+>/);
   assert.match(commandHelp('search'), /--type\s+<[^>]+>.*repeatable/);
+  assert.match(commandHelp('search'), /--exclude-status\s+<[^>]+>.*repeatable/);
   assert.match(commandHelp('ls'), /--type\s+<[^>]+>.*repeatable/);
   assert.match(commandHelp('export'), /--type\s+<[^>]+>.*repeatable/);
+  assert.match(commandHelp('export'), /--exclude-status\s+<[^>]+>.*repeatable/);
 });
 
 

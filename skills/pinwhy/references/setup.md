@@ -62,7 +62,7 @@ pinwhy skill install --codex --cwd "/已确认项目"
 pinwhy status --cwd "/已确认项目"
 ```
 
-已有黑板不必重新 init。项目级安装到 `.agents/skills/pinwhy/`；用户明确要求全局安装时加 `--user`，安装到 `~/.agents/skills/pinwhy/`。
+已有黑板不必重新 init。若上层父目录已有其他项目的 `.pinwhy/`、而当前子目录是独立项目，初始化时加 `--here`（`pinwhy init --here --title "项目或任务标题" --cwd "/已确认项目"`）建立独立黑板，避免误写入上层黑板。项目级安装到 `.agents/skills/pinwhy/`；用户明确要求全局安装时加 `--user`，安装到 `~/.agents/skills/pinwhy/`。
 
 用户明确需要后台服务时，可运行 `pinwhy service install --cwd "/已确认项目"`；它不安装 Claude 接入。排查问题使用 `pinwhy doctor --cwd "/已确认项目"`，分享诊断可加 `--share --json`。
 

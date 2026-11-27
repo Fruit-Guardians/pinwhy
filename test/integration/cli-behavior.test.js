@@ -131,7 +131,90 @@ test('clear conflicts and unsupported fields reject without appending', (t) => {
   const before = fs.readFileSync(paths(cwd).events);
   for (const args of [
     ['--clear', 'detail', '--detail', 'replacement'], ['--clear', 'severity', '--sev', 'high'],
-    ['--clear', 'tags', '--tag', 'auth'], ['--clear', 'title'], ['--clear', 'id'],
+    ['--clear', 'tags', '--tag', 'auth'], ['--clear', 'title'], ['--clear', 'id'], ['--clear', 'type'],
+    ['--type', '   '],
   ]) failure(run(['edit', node.id, ...args, '--json']));
   assert.deepEqual(fs.readFileSync(paths(cwd).events), before);
 });
+
+test('edit and batch evolve node type while keeping ID, edges and replay intact', (t) => {
+  const { cwd, run } = fixture(t);
+  const goal = addNode({ type: 'goal', title: 'Synthetic goal' }, cwd).node;
+  const evidence = addNode({ type: 'fact', title: 'Observed proof', status: 'confirmed' }, cwd).node;
+  const hyp = addNode({ type: 'hypothesis', title: 'Candidate root cause', status: 'open', confidence: 'suspected', target: goal.id }, cwd).node;
+  patchNode(evidence.id, {}, cwd);
+  const linked = run(['link', evidence.id, hyp.id, '--rel', 'supports', '--json']);
+  assert.equal(linked.status, 0, linked.stderr);
+
+  const edited = success(run(['edit', hyp.id, '--type', 'vuln', '--status', 'confirmed', '--sev', 'high', '--confidence', 'reproduced', '--json']));
+  assert.equal(edited.id, hyp.id);
+  assert.equal(edited.type, 'vuln');
+  assert.equal(edited.confidence, 'reproduced');
+
+  const batchResult = success(run(['batch', '--request-id', 'type-evolve', '--json'],
+    `${JSON.stringify({ op: 'node', ref: 'v', type: 'vuln', title: 'Initial claim', severity: 'low', confidence: 'suspected' })}\n`
+    + `${JSON.stringify({ op: 'edit', id: '$v', type: 'observation', status: 'confirmed' })}\n`));
+  assert.equal(batchResult.results[1].node.type, 'observation');
+
+  fs.unlinkSync(paths(cwd).state);
+  const replayed = replay(cwd);
+  assert.equal(replayed.nodes[hyp.id].type, 'vuln');
+  assert.equal(replayed.nodes[batchResult.refs.v].type, 'observation');
+  assert.equal(Object.values(replayed.edges).some((e) => e.from === evidence.id && e.to === hyp.id && e.kind === 'supports'), true);
+});
+
+test('exclude-status filters search, list and report exports while preserving unset statuses', (t) => {
+  const { cwd, run } = fixture(t);
+  const unset = addNode({ type: 'vuln', title: 'Unset active vuln', severity: 'high', confidence: 'reproduced' }, cwd).node;
+  const open = addNode({ type: 'vuln', title: 'Open active vuln', status: 'open', severity: 'medium', confidence: 'reproduced' }, cwd).node;
+  addNode({ type: 'vuln', title: 'Refuted claim', status: 'refuted', severity: 'high', confidence: 'reproduced' }, cwd);
+  addNode({ type: 'vuln', title: 'Superseded claim', status: 'superseded', severity: 'medium', confidence: 'reproduced' }, cwd);
+  addNode({ type: 'vuln', title: 'Deferred item', status: 'deferred', severity: 'low', confidence: 'static-confirmed' }, cwd);
+
+  const searched = success(run(['search', '--type', 'vuln', '--exclude-status', 'refuted,superseded', '--exclude-status', 'deferred', '--json']));
+  assert.equal(searched.total, 2);
+  assert.deepEqual(new Set(searched.items.map((item) => item.id)), new Set([unset.id, open.id]));
+
+  const listed = success(run(['ls', '--type', 'vuln', '--exclude-status', 'refuted,superseded,deferred', '--all', '--json']));
+  assert.deepEqual(listed.map((n) => n.id), [unset.id, open.id]);
+
+  const outFile = path.join(cwd, 'filtered.md');
+  success(run(['export', '--format', 'markdown', '--type', 'vuln', '--exclude-status', 'refuted,superseded,deferred', '--out', outFile, '--json']));
+  const markdown = fs.readFileSync(outFile, 'utf8');
+  assert.match(markdown, /Selected nodes: 2/);
+  assert.doesNotMatch(markdown, /Refuted claim|Superseded claim|Deferred item/);
+
+  failure(run(['export', '--format', 'html', '--exclude-status', 'refuted', '--out', path.join(cwd, 'bad.html'), '--json']));
+  const typo = failure(run(['search', '--exclude-status', 'refutd', '--json']), 'invalid_value');
+  assert.equal(typo.suggestion, 'refuted');
+});
+
+test('explicit --cwd in a nested directory explains ancestor boards and --here consistently', (t) => {
+  const { cwd, home } = fixture(t, true);
+  const sub = path.join(cwd, 'subproject');
+  fs.mkdirSync(sub);
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('PINWHY_')));
+  const runSub = (args) => spawnSync(process.execPath, [CLI, ...args, '--cwd', sub, '--json'], {
+    cwd: sub, env: { ...env, HOME: home, USERPROFILE: home }, encoding: 'utf8',
+  });
+
+  const statusErr = failure(runSub(['status']), 'board_missing');
+  assert.match(statusErr.message, /init --here/);
+  assert.ok(statusErr.message.includes(cwd));
+
+  const noInitErr = failure(runSub(['fact', 'Do not leak to parent', '--no-init']), 'board_missing');
+  assert.match(noInitErr.message, /init --here/);
+  assert.equal(Object.keys(replay(cwd).nodes).length, 0);
+
+  const initErr = failure(runSub(['init', '--title', 'Subproject']));
+  assert.match(initErr.message, /--here/);
+  assert.doesNotMatch(initErr.message, /use it automatically/);
+
+  const created = success(runSub(['init', '--here', '--title', 'Isolated subproject']));
+  assert.equal(path.resolve(created.cwd), path.resolve(sub));
+  assert.equal(isInitializedSub(sub), true);
+});
+
+function isInitializedSub(dir) {
+  return fs.existsSync(paths(dir).events);
+}

@@ -5,7 +5,7 @@ import { isGraphSnapshot } from './graph-stream';
 
 /** Writes a person makes from the viewer. The server stamps them as human and checks where they came from. */
 export type NodeInput = { type: string; title: string; detail?: string; parent?: string; target?: string; relation?: string; label?: string; tags?: string[]; at?: string; status?: string; severity?: string; confidence?: string };
-type PatchFields = Partial<Record<'title' | 'detail', string>> & Partial<Record<'status' | 'severity' | 'confidence' | 'at', string | null>> & { tags?: string[] | null };
+type PatchFields = Partial<Record<'type' | 'title' | 'detail', string>> & Partial<Record<'status' | 'severity' | 'confidence' | 'at', string | null>> & { tags?: string[] | null };
 export type NodePatch = PatchFields & { expected?: PatchFields };
 
 export class NodeConflict extends Error {

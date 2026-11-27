@@ -1,7 +1,7 @@
 import type { NodeInput, NodePatch } from './api/client';
 import type { BoardNode } from './types';
 
-export type EditableField = 'title' | 'detail' | 'status' | 'severity' | 'confidence' | 'tags' | 'at';
+export type EditableField = 'type' | 'title' | 'detail' | 'status' | 'severity' | 'confidence' | 'tags' | 'at';
 export type EditableFields = Partial<Record<EditableField, string>>;
 export type EditDraft = { editing: boolean; fields: EditableFields; expected: EditableFields; conflict: boolean; conflictFields?: string[] };
 export const EMPTY_EDIT: EditDraft = { editing: false, fields: {}, expected: {}, conflict: false };

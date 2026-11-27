@@ -100,6 +100,8 @@
           "asOf": true,
           "doctor": true,
           "editClear": true,
+          "editType": true,
+          "excludeStatusFilter": true,
           "listFilters": true,
           "resourcePaths": true,
           "ephemeralViewer": true
@@ -423,6 +425,8 @@
           "asOf": true,
           "doctor": true,
           "editClear": true,
+          "editType": true,
+          "excludeStatusFilter": true,
           "listFilters": true,
           "resourcePaths": true,
           "ephemeralViewer": true

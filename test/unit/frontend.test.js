@@ -88,6 +88,11 @@ test('previously unset fields use the empty-string API baseline without inventin
   const draft = changeDraft(EMPTY_EDIT, { id: 'n', type: 'custom', title: 'N' }, 'confidence', 'confirmed');
   assert.deepEqual(draft.fields, { confidence: 'confirmed' });
   assert.deepEqual(draft.expected, { confidence: '' });
+  const typed = changeDraft(draft, { id: 'n', type: 'hypothesis', title: 'N' }, 'type', 'finding');
+  assert.deepEqual(nodePatchFromDraft(typed), {
+    confidence: 'confirmed', type: 'finding',
+    expected: { confidence: '', type: 'hypothesis' },
+  });
 });
 test('existing-node links default to weak semantics and preview exactly the submitted direction', () => {
   assert.deepEqual(existingLink('a', 'b', 'outgoing'), { from: 'a', to: 'b', kind: 'related-to' });

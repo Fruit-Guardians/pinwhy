@@ -10,7 +10,9 @@
 
 一个节点只表达一个主要判断。标题只写这个判断，控制在约 80 字内，`lint` 的 `long-titles` 以此为界；证据、文件位置、条件和过程放 `--detail`。标题不复述其他节点的结论（例如不写“hy1 被反驳”或`（已证伪）`、`（设计/加固）`等括号前缀）：状态用 `--status`，分类用 `--tag`，关系用边表达，否则读者只看标题就以为关系与状态维度可有可无。节点类型和关系可自定义，不构成状态机；不过使用标准关系名（如 `contradicts` 而非 `refutes`、`answers` 而非 `responds-to`）能让 `lint` 与审计模式直接识别。创建节点默认不连边、不移动游标；`--enter` 才显式进入，`--relate-here` 才与当前位置建立默认弱关系 `related-to`，不能借此暗示已经证明的来源。已知新节点与已有节点的关系时，可用 `--to "<已有ID>" --rel <关系>` 在创建时一并声明，读作“新节点 关系 已有节点”；省略 `--rel` 只得到弱关系 `related-to`。`--to` 可重复，同一关系连向多个已有节点（`features.nodeMultiTarget`）；它不移动游标，也不与 `--parent`/`--relate-here` 同用。关系不同的连边用 `link`。
 
-特别注意证据方向：若先有观察/事实，再新建 `finding`/`hypothesis` 时顺便用 `--to` 连向已有证据，新节点在关系左侧，必须用 `--rel derived-from`（结论 `derived-from` 证据），**不要写 `--rel supports`**（那会变成“结论支持证据”，导致 `lint` 仍认为该结论缺少证据）；用 `link "<证据ID>" "<结论ID>" --rel supports` 同样可保持正确方向。
+特别注意两类连边不要混用：
+- **挂靠目标/问题**：任何新节点（包括 `fact`、`observation`、`hypothesis`、`finding`）挂靠到 `goal` 时，直接写 `--to "<目标ID>"`（省略 `--rel` 即 `related-to`，**不要对 `goal` 写 `--rel derived-from`**）；回答 `question` 写 `--to "<问题ID>" --rel answers`。
+- **连接结论与证据**：若先有观察/事实，再新建 `finding`/`hypothesis` 时顺便用 `--to` 连向已有证据，新节点在关系左侧，必须用 `--rel derived-from`（结论 `derived-from` 证据），**不要写 `--rel supports`**（那会变成“结论支持证据”）；用 `link "<证据ID>" "<结论ID>" --rel supports` 同样可保持正确方向。
 
 ```sh
 pinwhy node add hypothesis "边界条件可能导致错误" --confidence suspected --detail "已知条件与待核对部分" --cwd "/已确认项目" --no-init
@@ -72,7 +74,7 @@ pinwhy node add finding "候选结论" --confidence suspected --detail "待核�
 pinwhy edit "<候选ID>" --confidence static-confirmed --detail "已核对的源码位置、成立条件与尚未执行的验证" --cwd "/已确认项目" --no-init
 ```
 
-最后一条只在确实完成静态核对后执行。真实复现后才把该候选更新为 `--confidence reproduced`，并补充真实环境、输入与观测结果。`edit --detail` 会替换详情，应保留仍有价值的旧条件与证据。已核实的 fact/observation/result 可标记 `--status confirmed`，但这不会自动提升其他节点可信度。同理，当反证已经复现并推翻某候选时，只给**反证节点**标 `reproduced` 并把旧候选设为 `--status refuted`，不要把被推翻的旧候选本身标成 `reproduced`。
+最后一条只在确实完成静态核对后执行。真实复现后才把该候选更新为 `--confidence reproduced`，并补充真实环境、输入与观测结果。当原先记录的 `hypothesis` 被证实为正式结论（或初判 `finding`/`vuln` 复核后只是普通 `observation`/`note`）时，若 CLI 声明 `features.editType`，可直接执行 `pinwhy edit "<节点ID>" --type finding`（`batch` 的 `edit` 同样支持 `type`）原地演进角色并保留已有连边与历史，不必在标题加 `[已降级]` 前缀。`edit --detail` 会替换详情，应保留仍有价值的旧条件与证据。已核实的 fact/observation/result 标记 `--status confirmed`，使恢复时进入 `confirmedFacts`，但这不会自动提升其他节点可信度。同理，当反证已经复现并推翻某候选时，只给**反证节点**标 `reproduced` 并把旧候选设为 `--status refuted`，不要把被推翻的旧候选本身标成 `reproduced`。
 
 提示：`config.json` 中的 `redact: true` 仅作用于可选的工具活动层（Hook 采集），不会自动脱敏逻辑节点、`events.jsonl` 或导出产物；导出分享前需自行核对敏感原文。
 
@@ -96,12 +98,13 @@ pinwhy show "<节点ID或唯一前缀>" --cwd "/已确认项目"
 ```sh
 pinwhy search "session cookie" --json --cwd "/已确认项目"
 pinwhy search --type finding,vuln,hypothesis --sev high --json --cwd "/已确认项目"
+pinwhy search --type vuln --exclude-status refuted,superseded,dead --json --cwd "/已确认项目"
 pinwhy search --type vuln --sev high --confidence reproduced --json --cwd "/已确认项目"
 pinwhy search --tag site=alpha.example --tag auth --group-by severity,status --cwd "/已确认项目"
 pinwhy search --type vuln --group-by tag:site,severity,status --limit 1 --json --cwd "/已确认项目"
 ```
 
-- 关键词按字面量匹配；`--type`、`--status`、`--sev`、`--confidence`、可重复的 `--tag` 和 `--rel` / `--related-to` 可组合，取交集。未填状态不等于 `open`；只读查询不推断或更改节点。
+- 关键词按字面量匹配；`--type`、`--status`、`--exclude-status`（排除指定状态，逗号分隔或重复传入，声明于 `features.excludeStatusFilter`，会保留 `status` 为 `null` 或其他有效值的记录）、`--sev`、`--confidence`、可重复的 `--tag` 和 `--rel` / `--related-to` 可组合，取交集。未填状态不等于 `open`；只读查询不推断或更改节点。
 - `--type` 支持单个类型或逗号分隔/重复传入多个类型（如 `--type finding,vuln,hypothesis` 或 `--type finding --type vuln`，同一节点匹配任一请求类型即可，在 `search`、`ls` 和报告 `export` 中通用，声明于 `features.multiTypeFilter`）；空白或空片段会报错。
 - `total` 是全部匹配数，`items` 是最多 `--limit` 条明细（默认 30，上限 1000），`truncated` 表示明细是否截断。不要根据 `items.length` 统计全部结果。
 - `--group-by` 支持 `severity`、`status`、`tag:<键>`，可用逗号组合。JSON 的 `groups` 每项为 `{values: {...}, count}`，覆盖全部匹配，不受 `--limit` 影响；缺省值独立列为 `null`。文本模式只列总数和全部分组。
@@ -117,7 +120,7 @@ pinwhy search --type vuln --group-by tag:site,severity,status --limit 1 --json -
 先读取 `capabilities.exportFormats`；仅调用已支持的格式：
 
 ```sh
-pinwhy export --format markdown --type vuln --confidence reproduced --sort severity --out report.md --cwd "/已确认项目"
+pinwhy export --format markdown --type vuln --exclude-status refuted,superseded,dead --sort severity --out report.md --cwd "/已确认项目"
 pinwhy export --format markdown --tag site=alpha.example --group-by severity,status --out site.md --cwd "/已确认项目"
 pinwhy export --format mermaid --group-by tag:site --max-nodes 200 --out graph.mmd --cwd "/已确认项目"
 pinwhy export --format sarif --type finding --out findings.sarif --cwd "/已确认项目"
